@@ -6,12 +6,17 @@ import File from '../models/File.js';
 import Reminder from '../models/Reminder.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validateRequest.js';
-import { clientSchema, clientIdParam } from '../utils/validators.js';
+import { clientSchema, clientIdParam, noteSchema, objectIdParam } from '../utils/validators.js';
 import { HttpError, NOT_FOUND, FORBIDDEN } from '../utils/HttpError.js';
 
 const clientsRouter = Router();
 
 clientsRouter.use(requireAuth);
+
+const attachClientId = (req, _res, next) => {
+  req.body.clientId = req.params.clientId;
+  next();
+};
 
 // GET ALL
 clientsRouter.get('/', async (req, res) => {
@@ -25,6 +30,75 @@ clientsRouter.get('/', async (req, res) => {
     message: 'Clients retrieved successfully'
   });
 });
+
+// GET appointments by client
+clientsRouter.get('/:clientId/appointments', validate(objectIdParam('clientId')), async (req, res) => {
+  const client = await Client.findById(req.params.clientId).exec();
+  if (!client) throw new HttpError(NOT_FOUND, 'Client not found');
+
+  if (client.user.toString() !== req.user._id.toString()) {
+    throw new HttpError(FORBIDDEN, 'Forbidden');
+  }
+
+  const appointments = await Appointment.find({ client: client._id })
+    .sort({ date: 1, startTime: 1 })
+    .exec();
+
+  res.status(200).json({
+    success: true,
+    data: appointments,
+    message: 'Appointments retrieved successfully'
+  });
+});
+
+// GET notes by client
+clientsRouter.get('/:clientId/notes', validate(objectIdParam('clientId')), async (req, res) => {
+  const client = await Client.findById(req.params.clientId).exec();
+  if (!client) throw new HttpError(NOT_FOUND, 'Client not found');
+
+  if (client.user.toString() !== req.user._id.toString()) {
+    throw new HttpError(FORBIDDEN, 'Forbidden');
+  }
+
+  const notes = await Note.find({ client: client._id })
+    .populate('appointment')
+    .sort({ createdAt: -1 })
+    .exec();
+
+  res.status(200).json({
+    success: true,
+    data: notes,
+    message: 'Notes retrieved successfully'
+  });
+});
+
+// CREATE note by client
+clientsRouter.post(
+  '/:clientId/notes',
+  validate(objectIdParam('clientId')),
+  attachClientId,
+  validate(noteSchema),
+  async (req, res) => {
+    const client = await Client.findById(req.params.clientId).exec();
+    if (!client) throw new HttpError(NOT_FOUND, 'Client not found');
+
+    if (client.user.toString() !== req.user._id.toString()) {
+      throw new HttpError(FORBIDDEN, 'Forbidden');
+    }
+
+    const note = await Note.create({
+      ...req.body,
+      client: client._id,
+      appointment: req.body.appointmentId || undefined
+    });
+
+    res.status(201).json({
+      success: true,
+      data: note,
+      message: 'Note created successfully'
+    });
+  }
+);
 
 // GET by ID 
 clientsRouter.get('/:id', validate(clientIdParam), async (req, res) => {
