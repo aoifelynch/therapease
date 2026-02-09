@@ -1,18 +1,29 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "TherapEase",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/index.js",
+    "dev": "node src/index.js",
+    "seed": "node utils/seed.js",
+    "test": "cross-env NODE_ENV=test MONGODB_URI=mongodb://localhost:27017/test-db SESSION_SECRET=test-secret jest --runInBand",
+    "test:watch": "cross-env NODE_ENV=test MONGODB_URI=mongodb://localhost:27017/test-db SESSION_SECRET=test-secret jest --watch",
+    "test:coverage": "cross-env NODE_ENV=test MONGODB_URI=mongodb://localhost:27017/test-db SESSION_SECRET=test-secret jest --coverage"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "connect-mongo": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "express-session": "^1.19.0",
+    "express-validator": "^7.3.1",
+    "helmet": "^8.1.0",
     "mongoose": "^9.1.2",
     "morgan": "^1.10.1"
   },

@@ -17,7 +17,10 @@ filesRouter.post('/', async (req, res) => {
     throw new HttpError(FORBIDDEN, 'Forbidden');
   }
 
-  const file = await File.create(req.body);
+  const file = await File.create({
+    ...req.body,
+    client: client._id
+  });
 
   res.status(201).json({
     success: true,

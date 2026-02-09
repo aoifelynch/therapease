@@ -66,4 +66,42 @@ appointmentsRouter.delete('/:id', validate(appointmentIdParam), async (req, res)
   });
 });
 
+// UPDATE
+appointmentsRouter.put(
+  '/:id',
+  validate(appointmentIdParam),
+  validate(appointmentSchema),
+  async (req, res) => {
+    const appointment = await Appointment.findById(req.params.id).exec();
+    if (!appointment) throw new HttpError(NOT_FOUND, 'Appointment not found');
+
+    if (appointment.user.toString() !== req.user._id.toString()) {
+      throw new HttpError(FORBIDDEN, 'Forbidden');
+    }
+
+    const client = await Client.findById(req.body.clientId).exec();
+    if (!client) throw new HttpError(NOT_FOUND, 'Client not found');
+
+    if (client.user.toString() !== req.user._id.toString()) {
+      throw new HttpError(FORBIDDEN, 'Forbidden');
+    }
+
+    const updatedAppointment = await Appointment.findByIdAndUpdate(
+      req.params.id,
+      {
+        ...req.body,
+        user: req.user._id,
+        client: client._id
+      },
+      { new: true, runValidators: true }
+    ).exec();
+
+    res.status(200).json({
+      success: true,
+      data: updatedAppointment,
+      message: 'Appointment updated successfully'
+    });
+  }
+);
+
 export default appointmentsRouter;

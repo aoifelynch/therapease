@@ -37,7 +37,7 @@ clientSchema.set("toJSON", {
   }
 });
 
-clientSchema.pre('findOneAndDelete', async function (next) {
+clientSchema.pre('findOneAndDelete', async function () {
   const clientId = this.getQuery()._id;
 
   await Promise.all([
@@ -47,7 +47,6 @@ clientSchema.pre('findOneAndDelete', async function (next) {
     Reminder.deleteMany({ client: clientId }),
   ]);
 
-  next();
 });
 
 const Client = mongoose.model("Client", clientSchema);

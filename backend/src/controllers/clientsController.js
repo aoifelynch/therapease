@@ -1,5 +1,9 @@
 import { Router } from 'express';
 import Client from '../models/Client.js';
+import Appointment from '../models/Appointment.js';
+import Note from '../models/Note.js';
+import File from '../models/File.js';
+import Reminder from '../models/Reminder.js';
 import { requireAuth } from '../middleware/auth.js';
 import { validate } from '../middleware/validateRequest.js';
 import { clientSchema, clientIdParam } from '../utils/validators.js';
@@ -31,9 +35,23 @@ clientsRouter.get('/:id', validate(clientIdParam), async (req, res) => {
     throw new HttpError(FORBIDDEN, 'Forbidden');
   }
 
+  const [appointments, notes, files, reminders] = await Promise.all([
+    Appointment.find({ client: client._id }).sort({ date: 1, startTime: 1 }).exec(),
+    Note.find({ client: client._id }).populate('appointment').sort({ createdAt: -1 }).exec(),
+    File.find({ client: client._id }).sort({ uploadedAt: -1 }).exec(),
+    Reminder.find({ client: client._id }).sort({ createdAt: -1 }).exec(),
+    // I will add in payments here eventually. 
+  ]);
+
   res.status(200).json({
     success: true,
-    data: client,
+    data: {
+      client,
+      appointments,
+      notes,
+      files,
+      reminders
+    },
     message: 'Client retrieved successfully'
   });
 });
