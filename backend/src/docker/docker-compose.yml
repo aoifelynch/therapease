@@ -62,7 +62,7 @@ services:
       - /app/node_modules
     networks:
       - therapease-network
-    command: npm run dev
+    command: node src/index.js
 
   # Worker Service (BullMQ workers)
   worker:
@@ -87,7 +87,7 @@ services:
       - /app/node_modules
     networks:
       - therapease-network
-    command: npm run worker
+    command: node src/workers/emailWorker.js
 
 volumes:
   mongo-data:

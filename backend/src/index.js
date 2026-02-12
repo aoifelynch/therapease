@@ -1,5 +1,19 @@
 import mongoose from 'mongoose';
 import createApp from './app.js';
+import emailQueue from "./queues/emailQueue.js";
+
+setTimeout(async () => {
+  console.log("📤 Adding test job to queue...");
+
+  await emailQueue.add("testEmail", {
+    to: "test@test.com",
+    subject: "Docker Test",
+    html: "<h1>It works 🎉</h1>",
+  });
+
+  console.log("✅ Test job added");
+}, 5000);
+
 
 const MONGO_DEFAULT = 'mongodb://127.0.0.1:27017/therapease';
 

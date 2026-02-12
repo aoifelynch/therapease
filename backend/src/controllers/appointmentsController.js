@@ -1,6 +1,7 @@
 import Appointment from '../models/Appointment.js';
 import Client from '../models/Client.js';
 import { HttpError, NOT_FOUND, FORBIDDEN, BAD_REQUEST } from '../utils/HttpError.js';
+import emailQueue from '../queues/emailQueue.js';
 
 const parseDate = (value) => {
   const date = new Date(value);
@@ -88,10 +89,21 @@ export const createAppointment = async (req, res) => {
     ...req.body
   });
 
+  // Queue appointment confirmation email
+  await emailQueue.add("appointmentConfirmation", {
+    to: client.email, 
+    subject: "Appointment Confirmation - TherapEase",
+    html: `
+      <h2>Your Appointment is Confirmed</h2>
+      <p>Date: ${appointment.date}</p>
+      <p>Time: ${appointment.startTime}</p>
+    `,
+  });
+
   res.status(201).json({
     success: true,
     data: appointment,
-    message: 'Appointment created successfully'
+    message: 'Appointment created successfully. Confirmation email queued.'
   });
 };
 
