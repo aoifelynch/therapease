@@ -1,16 +1,12 @@
-import { Router } from 'express';
 import Note from '../models/Note.js';
-import { requireAuth } from '../middleware/auth.js';
-import { validate } from '../middleware/validateRequest.js';
-import { objectIdParam } from '../utils/validators.js';
-import { HttpError, NOT_FOUND, FORBIDDEN } from '../utils/HttpError.js';
-
-const notesRouter = Router();
-
-notesRouter.use(requireAuth);
+import { HttpError, NOT_FOUND, FORBIDDEN, BAD_REQUEST } from '../utils/HttpError.js';
 
 // UPDATE
-notesRouter.put('/:noteId', validate(objectIdParam('noteId')), async (req, res) => {
+export const updateNote = async (req, res) => {
+  if (!req.params.noteId) {
+    throw new HttpError(BAD_REQUEST, 'Note ID is required');
+  }
+
   const note = await Note.findById(req.params.noteId)
     .populate('client')
     .exec();
@@ -38,10 +34,10 @@ notesRouter.put('/:noteId', validate(objectIdParam('noteId')), async (req, res) 
     data: updatedNote,
     message: 'Note updated successfully'
   });
-});
+};
 
 // DELETE 
-notesRouter.delete('/:noteId', validate(objectIdParam('noteId')), async (req, res) => {
+export const deleteNote = async (req, res) => {
   const note = await Note.findById(req.params.noteId)
     .populate('client')
     .exec();
@@ -62,13 +58,10 @@ notesRouter.delete('/:noteId', validate(objectIdParam('noteId')), async (req, re
     data: { id: req.params.noteId },
     message: 'Note deleted successfully'
   });
-});
+};
 
 // VIEW SINGLE NOTE
-notesRouter.get(
-  "/:noteId",
-  validate(objectIdParam("noteId")),
-  async (req, res) => {
+export const getNoteById = async (req, res) => {
     const note = await Note.findById(req.params.noteId)
       .populate("client")
       .exec();
@@ -99,8 +92,4 @@ notesRouter.get(
       data: note,
       message: "Note retrieved successfully",
     });
-  }
-);
-
-
-export default notesRouter;
+};

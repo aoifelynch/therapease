@@ -1,27 +1,20 @@
-import express from "express";
 import User from "../models/User.js";
 import {
   HttpError,
   BAD_REQUEST,
   UNAUTHORIZED,
-  INTERNAL_SERVER_ERROR,
 } from "../utils/HttpError.js";
-import {
-  registerSchema,
-  loginSchema,
-  updateProfileSchema,
-  deleteAccountSchema
-} from "../utils/validators.js";
-import { validate } from "../middleware/validateRequest.js";
-import { requireAuth } from "../middleware/auth.js";
-
-const router = express.Router();
+import { generateAccessToken, generateRefreshToken } from "../utils/jwt.js";
 
 const safeUser = (user) => (user ? user.toJSON() : user);
 
 // User registration
-router.post("/register", validate(registerSchema), async (req, res) => {
+export const register = async (req, res) => {
   const { email, password, name } = req.body;
+
+  if (!email || !password || !name) {
+    throw new HttpError(BAD_REQUEST, "Email, password, and name are required");
+  }
 
   // Check if user already exists
   const existingUser = await User.findOne({ email });
@@ -37,18 +30,25 @@ router.post("/register", validate(registerSchema), async (req, res) => {
     passwordHash,
   });
 
-  // Set session
-  req.session.userId = user._id.toString();
+  // Generate tokens
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user);
 
   res.status(201).json({
     message: "User created successfully",
     user: safeUser(user),
+    accessToken,
+    refreshToken,
   });
-});
+};
 
 // User login
-router.post("/login", validate(loginSchema), async (req, res) => {
+export const login = async (req, res) => {
   const { email, password } = req.body;
+
+  if (!email || !password) {
+    throw new HttpError(BAD_REQUEST, "Email and password are required");
+  }
 
   // Find user by email
   const user = await User.findOne({ email });
@@ -62,54 +62,35 @@ router.post("/login", validate(loginSchema), async (req, res) => {
     throw new HttpError(UNAUTHORIZED, "Invalid credentials");
   }
 
-  // Set session
-  req.session.userId = user._id.toString();
+  // Generate tokens
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user);
 
   res.status(200).json({
     message: "Login successful",
     user: safeUser(user),
+    accessToken,
+    refreshToken,
   });
-});
+};
 
 // Logout endpoint
-router.post("/logout", async (req, res, next) => {
-  req.session.destroy((err) => {
-    if (err) {
-      return next(new HttpError(INTERNAL_SERVER_ERROR, "Could not log out"));
-    }
-    res.clearCookie("sessionId");
-    res.status(200).json({ message: "Logout successful" });
-  });
-});
+export const logout = async (req, res) => {
+  // With JWT tokens, logout is handled client-side by removing the token
+  res.status(200).json({ message: "Logout successful" });
+};
 
 // Check authentication status
-router.get("/me", async (req, res) => {
-  if (req.session && req.session.userId) {
-    const user = await User.findById(req.session.userId);
-    if (user) {
-      res.status(200).json({
-        success: true,
-        data: { authenticated: true, user: safeUser(user) },
-        message: "User authenticated"
-      });
-    } else {
-      res.status(401).json({ 
-        success: false,
-        data: { authenticated: false },
-        message: "User not found"
-      });
-    }
-  } else {
-    res.status(401).json({ 
-      success: false,
-      data: { authenticated: false },
-      message: "Not authenticated"
-    });
-  }
-});
+export const getMe = async (req, res) => {
+  res.status(200).json({
+    success: true,
+    data: { authenticated: true, user: safeUser(req.user) },
+    message: "User authenticated"
+  });
+};
 
 // Update user profile
-router.put("/profile", requireAuth, validate(updateProfileSchema), async (req, res) => {
+export const updateProfile = async (req, res) => {
   const { name, email, currentPassword, newPassword } = req.body;
   const userId = req.user._id;
 
@@ -163,10 +144,10 @@ router.put("/profile", requireAuth, validate(updateProfileSchema), async (req, r
     message: "Profile updated successfully",
     user: safeUser(updatedUser)
   });
-});
+};
 
 // Delete user account
-router.delete("/profile", requireAuth, validate(deleteAccountSchema), async (req, res) => {
+export const deleteAccount = async (req, res) => {
   const { password } = req.body;
   const userId = req.user._id;
 
@@ -184,16 +165,7 @@ router.delete("/profile", requireAuth, validate(deleteAccountSchema), async (req
 
   await User.findByIdAndDelete(userId).exec();
 
-  // Clear session
-  req.session.destroy((err) => {
-    if (err) {
-      console.error("Session destroy error:", err);
-    }
-  });
-
   res.status(200).json({
     message: "Account deleted successfully"
   });
-});
-
-export default router;
+};

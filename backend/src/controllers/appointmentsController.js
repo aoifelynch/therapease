@@ -1,14 +1,6 @@
-import { Router } from 'express';
 import Appointment from '../models/Appointment.js';
 import Client from '../models/Client.js';
-import { requireAuth } from '../middleware/auth.js';
-import { validate } from '../middleware/validateRequest.js';
-import { appointmentSchema, objectIdParam } from '../utils/validators.js';
 import { HttpError, NOT_FOUND, FORBIDDEN, BAD_REQUEST } from '../utils/HttpError.js';
-
-const appointmentsRouter = Router();
-
-appointmentsRouter.use(requireAuth);
 
 const parseDate = (value) => {
   const date = new Date(value);
@@ -24,7 +16,7 @@ const getDayRange = (date) => {
 };
 
 // GET ALL (also has date params available)
-appointmentsRouter.get('/', async (req, res) => {
+export const getAllAppointments = async (req, res) => {
   const { date, from, to } = req.query;
   const query = { user: req.user._id };
 
@@ -54,10 +46,10 @@ appointmentsRouter.get('/', async (req, res) => {
     data: appointments,
     message: 'Appointments retrieved successfully'
   });
-});
+};
 
 // GET by ID
-appointmentsRouter.get('/:appointmentId', validate(objectIdParam('appointmentId')), async (req, res) => {
+export const getAppointmentById = async (req, res) => {
   const appointment = await Appointment.findById(req.params.appointmentId)
     .populate('client')
     .exec();
@@ -73,11 +65,15 @@ appointmentsRouter.get('/:appointmentId', validate(objectIdParam('appointmentId'
     data: appointment,
     message: 'Appointment retrieved successfully'
   });
-});
+};
 
 // CREATE
-appointmentsRouter.post('/', validate(appointmentSchema), async (req, res) => {
+export const createAppointment = async (req, res) => {
   const { clientId } = req.body;
+
+  if (!clientId) {
+    throw new HttpError(BAD_REQUEST, 'Client ID is required');
+  }
 
   const client = await Client.findById(clientId).exec();
   if (!client) throw new HttpError(NOT_FOUND, 'Client not found');
@@ -97,16 +93,16 @@ appointmentsRouter.post('/', validate(appointmentSchema), async (req, res) => {
     data: appointment,
     message: 'Appointment created successfully'
   });
-});
+};
 
 // UPDATE
-appointmentsRouter.put(
-  '/:appointmentId',
-  validate(objectIdParam('appointmentId')),
-  validate(appointmentSchema),
-  async (req, res) => {
-    const appointment = await Appointment.findById(req.params.appointmentId).exec();
-    if (!appointment) throw new HttpError(NOT_FOUND, 'Appointment not found');
+export const updateAppointment = async (req, res) => {
+  const { clientId } = req.body;
+
+  if (!clientId) {
+    throw new HttpError(BAD_REQUEST, 'Client ID is required');
+  }
+
 
     if (appointment.user.toString() !== req.user._id.toString()) {
       throw new HttpError(FORBIDDEN, 'Forbidden');
@@ -129,16 +125,15 @@ appointmentsRouter.put(
       { new: true, runValidators: true }
     ).exec();
 
-    res.status(200).json({
-      success: true,
-      data: updatedAppointment,
-      message: 'Appointment updated successfully'
-    });
-  }
-);
+  res.status(200).json({
+    success: true,
+    data: updatedAppointment,
+    message: 'Appointment updated successfully'
+  });
+};
 
 // DELETE 
-appointmentsRouter.delete('/:appointmentId', validate(objectIdParam('appointmentId')), async (req, res) => {
+export const deleteAppointment = async (req, res) => {
   const appointment = await Appointment.findById(req.params.appointmentId).exec();
   if (!appointment) throw new HttpError(NOT_FOUND, 'Appointment not found');
 
@@ -153,6 +148,4 @@ appointmentsRouter.delete('/:appointmentId', validate(objectIdParam('appointment
     data: { id: req.params.appointmentId },
     message: 'Appointment deleted successfully'
   });
-});
-
-export default appointmentsRouter;
+};

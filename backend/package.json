@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "worker": "node src/worker.js",
     "seed": "node utils/seed.js",
     "test": "cross-env NODE_ENV=test MONGODB_URI=mongodb://localhost:27017/test-db SESSION_SECRET=test-secret jest --runInBand",
     "test:watch": "cross-env NODE_ENV=test MONGODB_URI=mongodb://localhost:27017/test-db SESSION_SECRET=test-secret jest --watch",
@@ -17,6 +18,7 @@
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "bullmq": "^5.68.0",
     "connect-mongo": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
@@ -24,6 +26,7 @@
     "express-session": "^1.19.0",
     "express-validator": "^7.3.1",
     "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.1.2",
     "morgan": "^1.10.1"
   },

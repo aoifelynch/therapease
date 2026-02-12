@@ -1,17 +1,9 @@
-import { Router } from 'express';
 import Payment from '../models/Payment.js';
 import Appointment from '../models/Appointment.js';
-import { requireAuth } from '../middleware/auth.js';
-import { validate } from '../middleware/validateRequest.js';
-import { paymentSchema } from '../utils/validators.js';
-import { HttpError, NOT_FOUND, FORBIDDEN } from '../utils/HttpError.js';
-
-const paymentsRouter = Router();
-
-paymentsRouter.use(requireAuth);
+import { HttpError, NOT_FOUND, FORBIDDEN, BAD_REQUEST } from '../utils/HttpError.js';
 
 // GET ALL
-paymentsRouter.get('/', async (req, res) => {
+export const getAllPayments = async (req, res) => {
   const payments = await Payment.find()
     .populate({
       path: 'appointment',
@@ -24,11 +16,17 @@ paymentsRouter.get('/', async (req, res) => {
     data: payments,
     message: 'Payments retrieved successfully'
   });
-});
+};
 
 // CREATE (Add stripe webhook later)
-paymentsRouter.post('/', validate(paymentSchema), async (req, res) => {
-  const appointment = await Appointment.findById(req.body.appointmentId).exec();
+export const createPayment = async (req, res) => {
+  const { appointmentId } = req.body;
+
+  if (!appointmentId) {
+    throw new HttpError(BAD_REQUEST, 'Appointment ID is required');
+  }
+
+  const appointment = await Appointment.findById(appointmentId).exec();
   if (!appointment) throw new HttpError(NOT_FOUND, 'Appointment not found');
 
   if (appointment.user.toString() !== req.user._id.toString()) {
@@ -42,6 +40,4 @@ paymentsRouter.post('/', validate(paymentSchema), async (req, res) => {
     data: payment,
     message: 'Payment recorded successfully'
   });
-});
-
-export default paymentsRouter;
+};

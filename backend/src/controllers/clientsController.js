@@ -1,25 +1,17 @@
-import { Router } from 'express';
 import Client from '../models/Client.js';
 import Appointment from '../models/Appointment.js';
 import Note from '../models/Note.js';
 import File from '../models/File.js';
 import Reminder from '../models/Reminder.js';
-import { requireAuth } from '../middleware/auth.js';
-import { validate } from '../middleware/validateRequest.js';
-import { clientSchema, clientIdParam, noteSchema, objectIdParam } from '../utils/validators.js';
-import { HttpError, NOT_FOUND, FORBIDDEN } from '../utils/HttpError.js';
+import { HttpError, NOT_FOUND, FORBIDDEN, BAD_REQUEST } from '../utils/HttpError.js';
 
-const clientsRouter = Router();
-
-clientsRouter.use(requireAuth);
-
-const attachClientId = (req, _res, next) => {
+export const attachClientId = (req, _res, next) => {
   req.body.clientId = req.params.clientId;
   next();
 };
 
 // GET ALL
-clientsRouter.get('/', async (req, res) => {
+export const getAllClients = async (req, res) => {
   const clients = await Client.find({ user: req.user._id })
     .sort({ createdAt: -1 })
     .exec();
@@ -29,10 +21,10 @@ clientsRouter.get('/', async (req, res) => {
     data: clients,
     message: 'Clients retrieved successfully'
   });
-});
+};
 
 // GET appointments by client
-clientsRouter.get('/:clientId/appointments', validate(objectIdParam('clientId')), async (req, res) => {
+export const getClientAppointments = async (req, res) => {
   const client = await Client.findById(req.params.clientId).exec();
   if (!client) throw new HttpError(NOT_FOUND, 'Client not found');
 
@@ -49,10 +41,10 @@ clientsRouter.get('/:clientId/appointments', validate(objectIdParam('clientId'))
     data: appointments,
     message: 'Appointments retrieved successfully'
   });
-});
+};
 
 // GET notes by client
-clientsRouter.get('/:clientId/notes', validate(objectIdParam('clientId')), async (req, res) => {
+export const getClientNotes = async (req, res) => {
   const client = await Client.findById(req.params.clientId).exec();
   if (!client) throw new HttpError(NOT_FOUND, 'Client not found');
 
@@ -70,15 +62,10 @@ clientsRouter.get('/:clientId/notes', validate(objectIdParam('clientId')), async
     data: notes,
     message: 'Notes retrieved successfully'
   });
-});
+};
 
 // CREATE note by client
-clientsRouter.post(
-  '/:clientId/notes',
-  validate(objectIdParam('clientId')),
-  attachClientId,
-  validate(noteSchema),
-  async (req, res) => {
+export const createClientNote = async (req, res) => {
     const client = await Client.findById(req.params.clientId).exec();
     if (!client) throw new HttpError(NOT_FOUND, 'Client not found');
 
@@ -92,16 +79,15 @@ clientsRouter.post(
       appointment: req.body.appointmentId || undefined
     });
 
-    res.status(201).json({
-      success: true,
-      data: note,
-      message: 'Note created successfully'
-    });
-  }
-);
+  res.status(201).json({
+    success: true,
+    data: note,
+    message: 'Note created successfully'
+  });
+};
 
 // GET by ID 
-clientsRouter.get('/:id', validate(clientIdParam), async (req, res) => {
+export const getClientById = async (req, res) => {
   const client = await Client.findById(req.params.id).exec();
   if (!client) throw new HttpError(NOT_FOUND, 'Client not found');
 
@@ -128,10 +114,10 @@ clientsRouter.get('/:id', validate(clientIdParam), async (req, res) => {
     },
     message: 'Client retrieved successfully'
   });
-});
+};
 
 // CREATE
-clientsRouter.post('/', validate(clientSchema), async (req, res) => {
+export const createClient = async (req, res) => {
   const client = await Client.create({
     user: req.user._id,
     ...req.body
@@ -142,14 +128,12 @@ clientsRouter.post('/', validate(clientSchema), async (req, res) => {
     data: client,
     message: 'Client created successfully'
   });
-});
+};
 
 // UPDATE
-clientsRouter.put(
-  '/:id',
-  validate(clientIdParam),
-  validate(clientSchema),
-  async (req, res) => {
+export const updateClient = async (req, res) => {  if (!req.params.id) {
+    throw new HttpError(BAD_REQUEST, 'Client ID is required');
+  }
     const client = await Client.findById(req.params.id).exec();
     if (!client) throw new HttpError(NOT_FOUND, 'Client not found');
 
@@ -163,16 +147,15 @@ clientsRouter.put(
       { new: true, runValidators: true }
     ).exec();
 
-    res.status(200).json({
-      success: true,
-      data: updatedClient,
-      message: 'Client updated successfully'
-    });
-  }
-);
+  res.status(200).json({
+    success: true,
+    data: updatedClient,
+    message: 'Client updated successfully'
+  });
+};
 
 // DELETE
-clientsRouter.delete('/:id', validate(clientIdParam), async (req, res) => {
+export const deleteClient = async (req, res) => {
   const client = await Client.findById(req.params.id).exec();
   if (!client) throw new HttpError(NOT_FOUND, 'Client not found');
 
@@ -187,6 +170,4 @@ clientsRouter.delete('/:id', validate(clientIdParam), async (req, res) => {
     data: { id: req.params.id },
     message: 'Client deleted successfully'
   });
-});
-
-export default clientsRouter;
+};

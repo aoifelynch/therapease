@@ -1,16 +1,16 @@
-import { Router } from 'express';
 import File from '../models/File.js';
 import Client from '../models/Client.js';
-import { requireAuth } from '../middleware/auth.js';
-import { HttpError, NOT_FOUND, FORBIDDEN } from '../utils/HttpError.js';
-
-const filesRouter = Router();
-
-filesRouter.use(requireAuth);
+import { HttpError, NOT_FOUND, FORBIDDEN, BAD_REQUEST } from '../utils/HttpError.js';
 
 // UPLOAD
-filesRouter.post('/', async (req, res) => {
-  const client = await Client.findById(req.body.clientId).exec();
+export const uploadFile = async (req, res) => {
+  const { clientId } = req.body;
+
+  if (!clientId) {
+    throw new HttpError(BAD_REQUEST, 'Client ID is required');
+  }
+
+  const client = await Client.findById(clientId).exec();
   if (!client) throw new HttpError(NOT_FOUND, 'Client not found');
 
   if (client.user.toString() !== req.user._id.toString()) {
@@ -27,10 +27,10 @@ filesRouter.post('/', async (req, res) => {
     data: file,
     message: 'File uploaded successfully'
   });
-});
+};
 
 // DELETE
-filesRouter.delete('/:id', async (req, res) => {
+export const deleteFile = async (req, res) => {
   const file = await File.findById(req.params.id)
     .populate('client')
     .exec();
@@ -50,7 +50,4 @@ filesRouter.delete('/:id', async (req, res) => {
     data: { id: req.params.id },
     message: 'File deleted successfully'
   });
-});
-
-
-export default filesRouter;
+};

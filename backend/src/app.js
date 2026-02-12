@@ -3,14 +3,13 @@ import helmet from 'helmet';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import appointmentsRouter from "./controllers/appointmentsController.js";
-import clientsRouter from "./controllers/clientsController.js";
-import filesRouter from "./controllers/filesController.js";
-import notesRouter from "./controllers/notesController.js";
-import paymentsRouter from "./controllers/paymentsController.js";
-import remindersRouter from "./controllers/remindersController.js";
-import authRouter from "./controllers/authController.js";
-import { sessionMiddleware } from './middleware/auth.js';
+import appointmentsRoutes from "./routes/appointmentsRoutes.js";
+import clientsRoutes from "./routes/clientsRoutes.js";
+import filesRoutes from "./routes/filesRoutes.js";
+import notesRoutes from "./routes/notesRoutes.js";
+import paymentsRoutes from "./routes/paymentsRoutes.js";
+import remindersRoutes from "./routes/remindersRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
 import { errorHandler, unknownEndpoint } from './middleware/error.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -34,16 +33,13 @@ const createApp = () => {
     // Serve static files from the frontend build
     app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
-    // Session middleware
-    app.use(sessionMiddleware());
-
-    app.use("/api/appointments", appointmentsRouter);
-    app.use("/api/clients", clientsRouter);
-    app.use("/api/files", filesRouter);
-    app.use("/api/notes", notesRouter);
-    app.use("/api/payments", paymentsRouter);
-    app.use("/api/reminders", remindersRouter);
-    app.use("/api/auth", authRouter);
+    app.use("/api/appointments", appointmentsRoutes);
+    app.use("/api/clients", clientsRoutes);
+    app.use("/api/files", filesRoutes);
+    app.use("/api/notes", notesRoutes);
+    app.use("/api/payments", paymentsRoutes);
+    app.use("/api/reminders", remindersRoutes);
+    app.use("/api/auth", authRoutes);
 
     // Serve index.html for all non-API routes (SPA support)
     app.get(/^(?!\/api).*/, (req, res) => {
