@@ -2,7 +2,7 @@ import nodemailer from "nodemailer";
 import { Worker } from "bullmq";
 import redisConnection from "../config/redis.js";
 
-console.log("📬 Email Worker starting...");
+console.log("Email Worker starting...");
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
