@@ -4,6 +4,14 @@ import { generateAccessToken, generateRefreshToken } from '../utils/jwt.js';
 
 const safeUser = (user) => (user ? user.toJSON() : user);
 
+// Generate access and refresh tokens
+const generateTokens = async (user) => {
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user);
+
+  return { accessToken, refreshToken };
+};
+
 export const authService = {
   // Register a new user
   async register(userData) {
@@ -28,13 +36,11 @@ export const authService = {
     });
 
     // Generate tokens
-    const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user);
+    const tokens = await generateTokens(user);
 
     return {
       user: safeUser(user),
-      accessToken,
-      refreshToken,
+      ...tokens,
     };
   },
 
@@ -56,14 +62,24 @@ export const authService = {
       throw new HttpError(UNAUTHORIZED, "Invalid credentials");
     }
 
-    // Generate tokens
-    const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user);
+    // Check if 2FA is enabled
+    if (user.twoFactorEnabled) {
+      // Don't generate tokens yet, client needs to verify 2FA first
+      return {
+        user: safeUser(user),
+        requires2FA: true,
+        accessToken: null,
+        refreshToken: null,
+      };
+    }
+
+    // Generate tokens only if 2FA is not required
+    const tokens = await generateTokens(user);
 
     return {
       user: safeUser(user),
-      accessToken,
-      refreshToken,
+      ...tokens,
+      requires2FA: false,
     };
   },
 
@@ -143,5 +159,8 @@ export const authService = {
     }
 
     await User.findByIdAndDelete(userId).exec();
-  }
+  },
+
+  // Generate tokens (exported for 2FA verification)
+  generateTokens
 };

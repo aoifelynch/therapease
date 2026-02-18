@@ -1,5 +1,4 @@
 import Reminder from '../models/Reminder.js';
-import { HttpError, NOT_FOUND, FORBIDDEN } from '../utils/HttpError.js';
 
 export const remindersService = {
   // Get all reminders for a user

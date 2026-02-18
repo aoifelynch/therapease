@@ -15,8 +15,20 @@ export const register = async (req, res) => {
 // User login
 export const login = async (req, res) => {
   const { email, password } = req.body;
+
   const result = await authService.login(email, password);
 
+  // If user has 2FA enabled
+  if (result.requires2FA) {
+    return res.status(200).json({
+      message: "2FA required",
+      requires2FA: true,
+      user: result.user,
+      tempUserId: result.user.id,
+    });
+  }
+
+  // If user doesn't have 2FA enabled (normal login)
   res.status(200).json({
     message: "Login successful",
     user: result.user,

@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  # MongoDB Service
+  mongo:
+    image: mongo:7
+    container_name: therapease-mongo
+    restart: unless-stopped
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: therapease
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - therapease-network
+
+  # Redis Service (for BullMQ)
+  redis:
+    image: redis:7-alpine
+    container_name: therapease-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - therapease-network
+
+  # Backend API Service
+  backend:
+    build:
+      context: .
+      dockerfile: src/docker/Dockerfile
+    container_name: therapease-backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb://mongo:27017/therapease
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - /app/node_modules
+    networks:
+      - therapease-network
+    command: node src/index.js
+
+  # Worker Service (BullMQ workers)
+  worker:
+    build:
+      context: .
+      dockerfile: src/docker/Dockerfile
+    container_name: therapease-worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb://mongo:27017/therapease
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - /app/node_modules
+    networks:
+      - therapease-network
+    command: node src/workers/emailWorker.js
+
+volumes:
+  mongo-data:
+  redis-data:
+
+networks:
+  therapease-network:
+    driver: bridge

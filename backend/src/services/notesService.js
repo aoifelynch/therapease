@@ -1,5 +1,4 @@
 import Note from '../models/Note.js';
-import Client from '../models/Client.js';
 import { HttpError, NOT_FOUND, FORBIDDEN, BAD_REQUEST } from '../utils/HttpError.js';
 
 export const notesService = {

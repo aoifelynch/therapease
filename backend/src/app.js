@@ -1,5 +1,6 @@
 import express from 'express';
 import helmet from 'helmet';
+import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -11,6 +12,7 @@ import paymentsRoutes from "./routes/paymentsRoutes.js";
 import remindersRoutes from "./routes/remindersRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import { errorHandler, unknownEndpoint } from './middleware/error.js';
+import twoFactorRoutes from "./routes/twoFactorRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,6 +32,14 @@ const createApp = () => {
     // Security middleware
     app.use(helmet());
 
+    // CORS configuration
+    app.use(cors({
+        origin: process.env.CORS_ORIGIN || ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001'],
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization']
+    }));
+
     // Serve static files from the frontend build
     app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
@@ -40,6 +50,7 @@ const createApp = () => {
     app.use("/api/payments", paymentsRoutes);
     app.use("/api/reminders", remindersRoutes);
     app.use("/api/auth", authRoutes);
+    app.use("/api/2fa", twoFactorRoutes);
 
     // Serve index.html for all non-API routes (SPA support)
     app.get(/^(?!\/api).*/, (req, res) => {
