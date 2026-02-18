@@ -1,30 +1,47 @@
 import File from '../models/File.js';
 import Client from '../models/Client.js';
-import { HttpError, NOT_FOUND, FORBIDDEN } from '../utils/HttpError.js';
+import { HttpError, NOT_FOUND, FORBIDDEN, BAD_REQUEST } from '../utils/HttpError.js';
 
 export const filesService = {
-  // Get all files for a client
-  async getFiles(clientId, userId) {
-    // Business logic here
-  },
+  // Upload a new file for a client
+  async uploadFile(fileData, userId) {
+    const { clientId } = fileData;
 
-  // Get a single file by ID
-  async getFileById(fileId, userId) {
-    // Business logic here
-  },
+    if (!clientId) {
+      throw new HttpError(BAD_REQUEST, 'Client ID is required');
+    }
 
-  // Create a new file
-  async createFile(fileData, userId) {
-    // Business logic here
-  },
+    const client = await Client.findById(clientId).exec();
+    if (!client) throw new HttpError(NOT_FOUND, 'Client not found');
 
-  // Update a file
-  async updateFile(fileId, updateData, userId) {
-    // Business logic here
+    if (client.user.toString() !== userId.toString()) {
+      throw new HttpError(FORBIDDEN, 'Forbidden');
+    }
+
+    const file = await File.create({
+      ...fileData,
+      client: client._id
+    });
+
+    return file;
   },
 
   // Delete a file
   async deleteFile(fileId, userId) {
-    // Business logic here
+    const file = await File.findById(fileId)
+      .populate('client')
+      .exec();
+
+    if (!file) {
+      throw new HttpError(NOT_FOUND, 'File not found');
+    }
+
+    if (file.client.user.toString() !== userId.toString()) {
+      throw new HttpError(FORBIDDEN, 'Forbidden');
+    }
+
+    await File.findByIdAndDelete(fileId).exec();
+
+    return { id: fileId };
   }
 };
