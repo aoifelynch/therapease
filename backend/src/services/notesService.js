@@ -1,7 +1,7 @@
 import Note from '../models/Note.js';
 import { HttpError, NOT_FOUND, FORBIDDEN, BAD_REQUEST } from '../utils/HttpError.js';
 
-export const notesService = {
+export default {
   // Get a single note by ID
   async getNoteById(noteId, userId) {
     const note = await Note.findById(noteId)

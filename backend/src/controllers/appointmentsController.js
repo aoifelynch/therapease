@@ -1,4 +1,4 @@
-import { appointmentsService } from '../services/appointmentsService.js';
+import appointmentsService from '../services/appointmentsService.js';
 
 // GET ALL (also has date params available)
 export const getAllAppointments = async (req, res) => {

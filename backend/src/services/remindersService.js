@@ -1,6 +1,6 @@
 import Reminder from '../models/Reminder.js';
 
-export const remindersService = {
+export default {
   // Get all reminders for a user
   async getReminders(userId) {
     const reminders = await Reminder.find({ user: userId }).exec();

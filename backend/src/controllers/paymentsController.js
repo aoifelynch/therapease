@@ -1,4 +1,4 @@
-import { paymentsService } from '../services/paymentsService.js';
+import paymentsService from '../services/paymentsService.js';
 
 // GET ALL
 export const getAllPayments = async (req, res) => {

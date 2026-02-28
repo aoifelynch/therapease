@@ -1,4 +1,4 @@
-import { filesService } from '../services/filesService.js';
+import filesService from '../services/filesService.js';
 
 // UPLOAD
 export const uploadFile = async (req, res) => {

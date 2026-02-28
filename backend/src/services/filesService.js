@@ -2,7 +2,7 @@ import File from '../models/File.js';
 import Client from '../models/Client.js';
 import { HttpError, NOT_FOUND, FORBIDDEN, BAD_REQUEST } from '../utils/HttpError.js';
 
-export const filesService = {
+export default {
   // Upload a new file for a client
   async uploadFile(fileData, userId) {
     const { clientId } = fileData;

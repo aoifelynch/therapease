@@ -1,4 +1,4 @@
-import { remindersService } from '../services/remindersService.js';
+import remindersService from '../services/remindersService.js';
 
 // GET ALL
 export const getAllReminders = async (req, res) => {

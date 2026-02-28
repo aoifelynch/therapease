@@ -1,4 +1,4 @@
-import { notesService } from '../services/notesService.js';
+import notesService from '../services/notesService.js';
 
 // UPDATE
 export const updateNote = async (req, res) => {

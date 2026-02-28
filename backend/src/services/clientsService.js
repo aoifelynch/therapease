@@ -5,7 +5,7 @@ import File from '../models/File.js';
 import Reminder from '../models/Reminder.js';
 import { HttpError, NOT_FOUND, FORBIDDEN, BAD_REQUEST } from '../utils/HttpError.js';
 
-export const clientsService = {
+export default {
   // Get all clients for a user
   async getClients(userId) {
     const clients = await Client.find({ user: userId })

@@ -1,4 +1,4 @@
-import { authService } from "../services/authService.js";
+import authService from "../services/authService.js";
 
 // User registration
 export const register = async (req, res) => {
@@ -18,7 +18,7 @@ export const login = async (req, res) => {
 
   const result = await authService.login(email, password);
 
-  // If user has 2FA enabled
+  // has 2FA enabled
   if (result.requires2FA) {
     return res.status(200).json({
       message: "2FA required",
@@ -28,7 +28,7 @@ export const login = async (req, res) => {
     });
   }
 
-  // If user doesn't have 2FA enabled (normal login)
+  // doesn't have 2FA enabled (normal login)
   res.status(200).json({
     message: "Login successful",
     user: result.user,

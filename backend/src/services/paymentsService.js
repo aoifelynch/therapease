@@ -2,7 +2,7 @@ import Payment from '../models/Payment.js';
 import Appointment from '../models/Appointment.js';
 import { HttpError, NOT_FOUND, FORBIDDEN, BAD_REQUEST } from '../utils/HttpError.js';
 
-export const paymentsService = {
+export default {
   // Get all payments for a user
   async getAllPayments(userId) {
     const payments = await Payment.find()

@@ -1,7 +1,7 @@
 import speakeasy from "speakeasy";
 import QRCode from "qrcode";
 import User from "../models/User.js";
-import { authService } from "../services/authService.js";
+import authService from "../services/authService.js";
 import { HttpError, BAD_REQUEST, UNAUTHORIZED } from "../utils/HttpError.js";
 
 const safeUser = (user) => (user ? user.toJSON() : user);

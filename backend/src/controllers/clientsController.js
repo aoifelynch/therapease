@@ -1,4 +1,4 @@
-import { clientsService } from '../services/clientsService.js';
+import clientsService from '../services/clientsService.js';
 
 export const attachClientId = (req, _res, next) => {
   req.body.clientId = req.params.clientId;

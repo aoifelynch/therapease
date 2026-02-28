@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { twoFactorAPI } from '../api/api';
 
 export const Setup2FA = () => {
-  const [step, setStep] = useState('start'); // start, display, verify
+  const [step, setStep] = useState('start');
   const [qrCode, setQrCode] = useState('');
   const [secret, setSecret] = useState('');
   const [code, setCode] = useState('');

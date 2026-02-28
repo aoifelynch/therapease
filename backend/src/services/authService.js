@@ -12,7 +12,7 @@ const generateTokens = async (user) => {
   return { accessToken, refreshToken };
 };
 
-export const authService = {
+export default {
   // Register a new user
   async register(userData) {
     const { email, password, name } = userData;
@@ -64,7 +64,6 @@ export const authService = {
 
     // Check if 2FA is enabled
     if (user.twoFactorEnabled) {
-      // Don't generate tokens yet, client needs to verify 2FA first
       return {
         user: safeUser(user),
         requires2FA: true,
