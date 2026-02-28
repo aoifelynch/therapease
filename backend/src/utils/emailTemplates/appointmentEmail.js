@@ -50,6 +50,20 @@ export const appointmentEmail = ({ client, appointment }) => {
                       </td>
                     </tr>
                   </table>
+
+                  ${appointment.type === 'online' && appointment.zoomLink ? `
+                  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #eef4ff; border: 1px solid #dbe7ff; border-radius: 6px; margin-bottom: 30px;">
+                    <tr>
+                      <td style="padding: 24px; text-align: center;">
+                        <p style="margin: 0 0 12px 0; color: #3b4a6b; font-size: 15px; font-weight: 600;">Online Session Link</p>
+                        <a href="${appointment.zoomLink}" style="display: inline-block; background-color: #667eea; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px; padding: 12px 20px; border-radius: 6px;">Join Zoom Meeting</a>
+                        <p style="margin: 12px 0 0 0; color: #666666; font-size: 13px; word-break: break-all;">
+                          If the button doesn't work, copy and paste this link: ${appointment.zoomLink}
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                  ` : ''}
                   
                   <p style="margin: 0 0 10px 0; color: #666666; font-size: 16px; line-height: 1.5;">
                     Please arrive 5-10 minutes early. If you need to reschedule or cancel, please contact us as soon as possible.

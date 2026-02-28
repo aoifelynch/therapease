@@ -3,6 +3,9 @@ import Client from '../models/Client.js';
 import { HttpError, NOT_FOUND, FORBIDDEN, BAD_REQUEST } from '../utils/HttpError.js';
 import emailQueue from '../queues/emailQueue.js';
 import { appointmentEmail } from '../utils/emailTemplates/appointmentEmail.js';
+import { createZoomMeeting } from "../services/zoomService.js";
+import { deleteZoomMeeting } from "./zoomService.js";
+import { deleteAppointment } from '../controllers/appointmentsController.js';
 
 const parseDate = (value) => {
   const date = new Date(value);
@@ -67,23 +70,36 @@ export default {
     const { clientId, ...rest } = appointmentData;
 
     if (!clientId) {
-      throw new HttpError(BAD_REQUEST, 'Client ID is required');
+      throw new HttpError(BAD_REQUEST, "Client ID is required");
     }
 
     const client = await Client.findById(clientId).exec();
-    if (!client) throw new HttpError(NOT_FOUND, 'Client not found');
+    if (!client) throw new HttpError(NOT_FOUND, "Client not found");
 
     if (client.user.toString() !== userId.toString()) {
-      throw new HttpError(FORBIDDEN, 'Forbidden');
+      throw new HttpError(FORBIDDEN, "Forbidden");
+    }
+
+    const appointmentPayload = { ...rest };
+
+    if (appointmentPayload.type === "online") {
+      const zoomMeeting = await createZoomMeeting({
+        date: appointmentPayload.date,
+        startTime: appointmentPayload.startTime,
+        endTime: appointmentPayload.endTime,
+        topic: `TherapEase Session - ${client.firstName} ${client.lastName}`
+      });
+
+      appointmentPayload.zoomLink = zoomMeeting.joinUrl;
+      appointmentPayload.zoomMeetingId = zoomMeeting.id;
     }
 
     const appointment = await Appointment.create({
       user: userId,
       client: client._id,
-      ...rest
+      ...appointmentPayload
     });
 
-    // Queue appointment confirmation email
     const html = appointmentEmail({ client, appointment });
 
     await emailQueue.add("appointmentConfirmation", {
@@ -103,6 +119,11 @@ export default {
 
     if (appointment.user.toString() !== userId.toString()) {
       throw new HttpError(FORBIDDEN, 'Forbidden');
+    }
+
+    // If status is being changed to 'cancelled' and it's an online appointment with Zoom meeting, delete the meeting
+    if (updateData.status === 'cancelled' && appointment.type === 'online' && appointment.zoomMeetingId) {
+      await deleteZoomMeeting(appointment.zoomMeetingId);
     }
 
     let updatedFields = { ...updateData };
@@ -132,11 +153,20 @@ export default {
 
   // Delete an appointment
   async deleteAppointment(appointmentId, userId) {
-    const appointment = await Appointment.findById(appointmentId).exec();
-    if (!appointment) throw new HttpError(NOT_FOUND, 'Appointment not found');
+
+    const appointment = await Appointment.findById(appointmentId);
+
+    if (!appointment) {
+      throw new HttpError(NOT_FOUND, "Appointment not found");
+    }
 
     if (appointment.user.toString() !== userId.toString()) {
-      throw new HttpError(FORBIDDEN, 'Forbidden');
+      throw new HttpError(FORBIDDEN, "Forbidden");
+    }
+
+    // Delete Zoom meeting if online appointment
+    if (appointment.type === "online" && appointment.zoomMeetingId) {
+      await deleteZoomMeeting(appointment.zoomMeetingId);
     }
 
     await Appointment.findByIdAndDelete(appointmentId).exec();

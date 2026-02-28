@@ -37,6 +37,8 @@ const appointmentSchema = new mongoose.Schema(
 
     zoomLink: String,
 
+    zoomMeetingId: String,
+
     status: {
       type: String,
       enum: ["upcoming", "completed", "cancelled"],

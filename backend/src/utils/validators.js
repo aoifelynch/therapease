@@ -189,7 +189,7 @@ export const appointmentSchema = {
   },
   zoomLink: {
     in: ['body'],
-    optional: true,
+    optional: { options: { nullable: true, checkFalsy: true } },
     isURL: { errorMessage: "'zoomLink' must be a valid URL" }
   },
   status: {
