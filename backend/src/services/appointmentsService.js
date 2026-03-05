@@ -5,7 +5,7 @@ import emailQueue from '../queues/emailQueue.js';
 import { appointmentEmail } from '../utils/emailTemplates/appointmentEmail.js';
 import { createZoomMeeting } from "../services/zoomService.js";
 import { deleteZoomMeeting } from "./zoomService.js";
-import { deleteAppointment } from '../controllers/appointmentsController.js';
+import { reminderQueue } from "../queues/reminderQueue.js";
 
 const parseDate = (value) => {
   const date = new Date(value);
@@ -121,9 +121,22 @@ export default {
       throw new HttpError(FORBIDDEN, 'Forbidden');
     }
 
-    // If status is being changed to 'cancelled' and it's an online appointment with Zoom meeting, delete the meeting
-    if (updateData.status === 'cancelled' && appointment.type === 'online' && appointment.zoomMeetingId) {
-      await deleteZoomMeeting(appointment.zoomMeetingId);
+    if (updateData.status === 'cancelled') {
+
+      // Delete Zoom meeting if it's an online appointment
+      if (appointment.type === 'online' && appointment.zoomMeetingId) {
+        await deleteZoomMeeting(appointment.zoomMeetingId);
+      }
+
+      // Remove SMS reminder job from BullMQ queue
+      if (appointment.reminderJobId) {
+        const job = await reminderQueue.getJob(appointment.reminderJobId);
+
+        if (job) {
+          await job.remove();
+        }
+      }
+
     }
 
     let updatedFields = { ...updateData };

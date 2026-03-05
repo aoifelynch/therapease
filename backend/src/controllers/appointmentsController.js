@@ -29,7 +29,7 @@ export const createAppointment = async (req, res) => {
   res.status(201).json({
     success: true,
     data: appointment,
-    message: 'Appointment created successfully. Confirmation email queued.'
+    message: 'Appointment created successfully. Confirmation email queued & SMS reminder scheduled '
   });
 };
 

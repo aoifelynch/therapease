@@ -43,6 +43,15 @@ const appointmentSchema = new mongoose.Schema(
       type: String,
       enum: ["upcoming", "completed", "cancelled"],
       default: "upcoming"
+    },
+    
+    reminderSent: {
+      type: Boolean,
+      default: false
+    },
+
+    reminderJobId: {
+      type: String
     }
   },
   { timestamps: true }

@@ -87,7 +87,7 @@ services:
       - /app/node_modules
     networks:
       - therapease-network
-    command: node src/workers/emailWorker.js
+    command: node src/workers/index.js
 
 volumes:
   mongo-data:
