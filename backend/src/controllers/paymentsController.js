@@ -1,4 +1,6 @@
 import paymentsService from '../services/paymentsService.js';
+import { createCheckoutSession } from "../services/stripeService.js";
+import Payment from "../models/Payment.js";
 
 // GET ALL
 export const getAllPayments = async (req, res) => {
@@ -11,13 +13,41 @@ export const getAllPayments = async (req, res) => {
   });
 };
 
-// CREATE (Add stripe webhook later)
-export const createPayment = async (req, res) => {
-  const payment = await paymentsService.createPayment(req.body, req.user._id);
+// CREATE
+// export const createPayment = async (req, res) => {
+//   const payment = await paymentsService.createPayment(req.body, req.user._id);
 
-  res.status(201).json({
-    success: true,
-    data: payment,
-    message: 'Payment recorded successfully'
+//   res.status(201).json({
+//     success: true,
+//     data: payment,
+//     message: 'Payment recorded successfully'
+//   });
+// };
+
+// Stripe
+export const createPaymentSession = async (req, res) => {
+
+  const { clientId, appointmentId, amount, clientEmail } = req.body;
+
+  const session = await createCheckoutSession({
+    clientEmail,
+    amount,
+    appointmentId,
+    clientId,
+    therapistId: req.user._id
   });
+
+  await Payment.create({
+    therapist: req.user._id,
+    client: clientId,
+    appointment: appointmentId,
+    stripeSessionId: session.id,
+    amount,
+    status: "pending"
+  });
+
+  res.json({
+    url: session.url
+  });
+
 };

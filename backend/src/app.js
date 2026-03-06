@@ -13,6 +13,7 @@ import remindersRoutes from "./routes/remindersRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import { errorHandler, unknownEndpoint } from './middleware/error.js';
 import twoFactorRoutes from "./routes/twoFactorRoutes.js";
+import webhookRoutes from "./routes/webhook.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,6 +26,9 @@ const createApp = () => {
     // Trust first proxy (required for Render to properly handle HTTPS)
     // https://expressjs.com/en/guide/behind-proxies.html
     app.set("trust proxy", 1);
+
+    // Webhook route
+    app.use("/api/webhook", webhookRoutes);
 
     // Middleware to parse JSON from request bodies.
     app.use(express.json());

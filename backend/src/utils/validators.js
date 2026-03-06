@@ -279,6 +279,36 @@ export const paymentSchema = {
   }
 };
 
+// Payment session validators for Stripe checkout
+export const paymentSessionSchema = {
+  clientId: {
+    in: ['body'],
+    notEmpty: { errorMessage: "'clientId' is required" },
+    custom: {
+      options: isObjectId,
+      errorMessage: "'clientId' must be a valid ObjectId"
+    }
+  },
+  appointmentId: {
+    in: ['body'],
+    notEmpty: { errorMessage: "'appointmentId' is required" },
+    custom: {
+      options: isObjectId,
+      errorMessage: "'appointmentId' must be a valid ObjectId"
+    }
+  },
+  amount: {
+    in: ['body'],
+    notEmpty: { errorMessage: "'amount' is required" },
+    isFloat: { options: { min: 0.01 }, errorMessage: "'amount' must be greater than 0" }
+  },
+  clientEmail: {
+    in: ['body'],
+    notEmpty: { errorMessage: "'clientEmail' is required" },
+    isEmail: { errorMessage: "'clientEmail' must be a valid email address" }
+  }
+};
+
 // Reminder validators
 export const reminderSchema = {
   clientId: {

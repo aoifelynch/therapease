@@ -2,16 +2,26 @@ import mongoose from "mongoose";
 
 const paymentSchema = new mongoose.Schema(
   {
+    therapist: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
+
+    client: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Client",
+      required: true
+    },
+
     appointment: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Appointment",
       required: true
     },
 
-    stripePaymentIntentId: {
-      type: String,
-      required: true
-    },
+    stripeSessionId: String,
+    stripePaymentIntentId: String,
 
     amount: {
       type: Number,
