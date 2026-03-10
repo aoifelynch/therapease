@@ -11,14 +11,14 @@ export const Setup2FA = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { accessToken } = useAuth();
+  const { user } = useAuth();
 
   const handleStartSetup = async () => {
     setError('');
     setLoading(true);
 
     try {
-      const response = await twoFactorAPI.setup(accessToken);
+      const response = await twoFactorAPI.setup();
       setQrCode(response.qrCode);
       setSecret(response.secret);
       setStep('display');
@@ -41,7 +41,7 @@ export const Setup2FA = () => {
     setLoading(true);
 
     try {
-      await twoFactorAPI.verifySetup(code, accessToken);
+      await twoFactorAPI.verifySetup(code);
       navigate('/dashboard', { state: { success: '2FA has been enabled on your account!' } });
     } catch (err) {
       setError(err.message);

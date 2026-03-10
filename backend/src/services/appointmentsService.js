@@ -20,6 +20,18 @@ const getDayRange = (date) => {
   return { start, end };
 };
 
+// check if appointment has passed (neeed to change status)
+const hasAppointmentPassed = (appointment) => {
+  if (!appointment.date || !appointment.endTime) return false;
+  
+  const appointmentDate = new Date(appointment.date);
+  const [hours, minutes] = appointment.endTime.split(':').map(Number);
+  
+  appointmentDate.setHours(hours, minutes, 0, 0);
+  
+  return appointmentDate < new Date();
+};
+
 export default {
   // Get all appointments (with date filtering)
   async getAppointments(userId, filters = {}) {
@@ -47,6 +59,17 @@ export default {
       .sort({ date: 1, startTime: 1 })
       .exec();
 
+    // Update status of past appointments
+    const updatePromises = appointments.map(async (appointment) => {
+      if (appointment.status === 'upcoming' && hasAppointmentPassed(appointment)) {
+        appointment.status = 'completed';
+        await appointment.save();
+      }
+      return appointment;
+    });
+
+    await Promise.all(updatePromises);
+
     return appointments;
   },
 
@@ -60,6 +83,12 @@ export default {
 
     if (appointment.user.toString() !== userId.toString()) {
       throw new HttpError(FORBIDDEN, 'Forbidden');
+    }
+
+    // Update status if appointment has passed
+    if (appointment.status === 'upcoming' && hasAppointmentPassed(appointment)) {
+      appointment.status = 'completed';
+      await appointment.save();
     }
 
     return appointment;

@@ -1,79 +1,217 @@
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+import axios from 'axios';
 
-// Helper to get auth headers
-const getAuthHeaders = (accessToken) => {
-  return {
-    'Content-Type': 'application/json',
-    ...(accessToken && { 'Authorization': `Bearer ${accessToken}` })
-  };
-};
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001/api',
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
 
-// Auth API calls
+// Request interceptor to add auth token
+api.interceptors.request.use(
+  (config) => {
+    const accessToken = localStorage.getItem('accessToken');
+    if (accessToken && !config.headers.Authorization) {
+      config.headers.Authorization = `Bearer ${accessToken}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Response interceptor to handle errors globally
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Redirect to login on unauthorized
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Auth API
 export const authAPI = {
-  register: async (email, password, name) => {
-    const response = await fetch(`${API_BASE}/auth/register`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ email, password, name })
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || 'Registration failed');
-    return data;
+  async register(email, password, name) {
+    const response = await api.post('/auth/register', { email, password, name });
+    return response.data;
   },
 
-  login: async (email, password) => {
-    const response = await fetch(`${API_BASE}/auth/login`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ email, password })
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || 'Login failed');
-    return data;
+  async login(email, password) {
+    const response = await api.post('/auth/login', { email, password });
+    return response.data;
   },
 
-  getMe: async (accessToken) => {
-    const response = await fetch(`${API_BASE}/auth/me`, {
-      method: 'GET',
-      headers: getAuthHeaders(accessToken)
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || 'Failed to fetch user');
-    return data;
+  async logout() {
+    const response = await api.post('/auth/logout');
+    return response.data;
+  },
+
+  async getMe() {
+    const response = await api.get('/auth/me');
+    return response.data;
+  },
+
+  async updateProfile(profileData) {
+    const response = await api.put('/auth/profile', profileData);
+    return response.data;
+  },
+
+  async deleteAccount(password) {
+    const response = await api.delete('/auth/profile', { data: { password } });
+    return response.data;
   }
 };
 
-// 2FA API calls
+// 2FA API
 export const twoFactorAPI = {
-  setup: async (accessToken) => {
-    const response = await fetch(`${API_BASE}/2fa/setup`, {
-      method: 'GET',
-      headers: getAuthHeaders(accessToken)
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || 'Failed to setup 2FA');
-    return data;
+  async setup() {
+    const response = await api.get('/2fa/setup');
+    return response.data;
   },
 
-  verifySetup: async (token, accessToken) => {
-    const response = await fetch(`${API_BASE}/2fa/verify-setup`, {
-      method: 'POST',
-      headers: getAuthHeaders(accessToken),
-      body: JSON.stringify({ token })
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || 'Failed to verify 2FA');
-    return data;
+  async verifySetup(token) {
+    const response = await api.post('/2fa/verify-setup', { token });
+    return response.data;
   },
 
-  verifyLogin: async (token, tempUserId) => {
-    const response = await fetch(`${API_BASE}/2fa/verify-login`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ token, tempUserId })
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || 'Failed to verify 2FA code');
-    return data;
+  async verifyLogin(token, tempUserId) {
+    const response = await api.post('/2fa/verify-login', { token, tempUserId });
+    return response.data;
   }
 };
+
+// Appointments API
+export const appointmentsAPI = {
+  async getAll(filters = {}) {
+    const response = await api.get('/appointments', { params: filters });
+    return response.data;
+  },
+
+  async getById(appointmentId) {
+    const response = await api.get(`/appointments/${appointmentId}`);
+    return response.data;
+  },
+
+  async create(appointmentData) {
+    const response = await api.post('/appointments', appointmentData);
+    return response.data;
+  },
+
+  async update(appointmentId, appointmentData) {
+    const response = await api.put(`/appointments/${appointmentId}`, appointmentData);
+    return response.data;
+  },
+
+  async delete(appointmentId) {
+    const response = await api.delete(`/appointments/${appointmentId}`);
+    return response.data;
+  }
+};
+
+// Clients API
+export const clientsAPI = {
+  async getAll() {
+    const response = await api.get('/clients');
+    return response.data;
+  },
+
+  async getById(clientId) {
+    const response = await api.get(`/clients/${clientId}`);
+    return response.data;
+  },
+
+  async create(clientData) {
+    const response = await api.post('/clients', clientData);
+    return response.data;
+  },
+
+  async update(clientId, clientData) {
+    const response = await api.put(`/clients/${clientId}`, clientData);
+    return response.data;
+  },
+
+  async delete(clientId) {
+    const response = await api.delete(`/clients/${clientId}`);
+    return response.data;
+  },
+
+  async getAppointments(clientId) {
+    const response = await api.get(`/clients/${clientId}/appointments`);
+    return response.data;
+  },
+
+  async getNotes(clientId) {
+    const response = await api.get(`/clients/${clientId}/notes`);
+    return response.data;
+  },
+
+  async createNote(clientId, noteData) {
+    const response = await api.post(`/clients/${clientId}/notes`, noteData);
+    return response.data;
+  }
+};
+
+// Notes API
+export const notesAPI = {
+  async getById(noteId) {
+    const response = await api.get(`/notes/${noteId}`);
+    return response.data;
+  },
+
+  async update(noteId, noteData) {
+    const response = await api.put(`/notes/${noteId}`, noteData);
+    return response.data;
+  },
+
+  async delete(noteId) {
+    const response = await api.delete(`/notes/${noteId}`);
+    return response.data;
+  }
+};
+
+// Files API
+export const filesAPI = {
+  async upload(fileData) {
+    const response = await api.post('/files', fileData);
+    return response.data;
+  },
+
+  async delete(fileId) {
+    const response = await api.delete(`/files/${fileId}`);
+    return response.data;
+  }
+};
+
+// Payments API
+export const paymentsAPI = {
+  async getAll() {
+    const response = await api.get('/payments');
+    return response.data;
+  },
+
+  async createSession(sessionData) {
+    const response = await api.post('/payments/create-session', sessionData);
+    return response.data;
+  }
+};
+
+// Reminders API
+export const remindersAPI = {
+  async getAll() {
+    const response = await api.get('/reminders');
+    return response.data;
+  },
+
+  async create(reminderData) {
+    const response = await api.post('/reminders', reminderData);
+    return response.data;
+  }
+};
+
+export default api;
