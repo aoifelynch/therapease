@@ -6,6 +6,7 @@ import { Login } from './pages/Login';
 import { Verify2FA } from './pages/Verify2FA';
 import { Setup2FA } from './pages/Setup2FA';
 import { Dashboard } from './pages/Dashboard';
+import { LandingPage } from './pages/Landing';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
           <Route path="/2fa-verify" element={<Verify2FA />} />
+          <Route path="/" element={<LandingPage />} />
           <Route
             path="/setup-2fa"
             element={
