@@ -53,118 +53,100 @@ export const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: theme.colors.secondary.cream }}>
-      {/* Left panel */}
-      <div
-        className="hidden lg:flex lg:w-5/12 flex-col justify-between p-12 relative overflow-hidden"
-        style={{ backgroundColor: theme.colors.primary.DEFAULT }}
-      >
-       {/* Background circles */}
-        <div className="absolute -top-16 -left-16 w-64 h-64 rounded-full opacity-20" style={{ backgroundColor: theme.colors.primary.light }} />
-        <div className="absolute bottom-24 -right-12 w-48 h-48 rounded-full opacity-15" style={{ backgroundColor: theme.colors.primary.darker }} />
-        <div className="absolute top-1/2 left-1/4 w-32 h-32 rounded-full opacity-10" style={{ backgroundColor: theme.colors.primary.lighter }} />
+    <div className="min-h-screen flex flex-col justify-center items-center relative overflow-hidden px-6 py-12" style={{ backgroundColor: theme.colors.secondary.cream }}>
+      {/* Background circles spread across the full page */}
+      <div className="absolute -top-20 -left-20 w-72 h-72 rounded-full pointer-events-none" style={{ backgroundColor: theme.colors.primary.light, opacity: 0.6 }} />
+      <div className="absolute -bottom-16 -right-16 w-64 h-64 rounded-full pointer-events-none" style={{ backgroundColor: theme.colors.primary.darker, opacity: 0.5 }} />
+      <div className="absolute top-1/3 -right-10 w-48 h-48 rounded-full pointer-events-none" style={{ backgroundColor: theme.colors.primary.lighter, opacity: 0.55 }} />
+      <div className="absolute bottom-1/3 -left-10 w-40 h-40 rounded-full pointer-events-none" style={{ backgroundColor: theme.colors.primary.DEFAULT, opacity: 0.2 }} />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full pointer-events-none" style={{ backgroundColor: theme.colors.primary.lighter, opacity: 0.15 }} />
 
-        <div className="relative z-10">
+      {/* Content */}
+      <div className="relative z-10 w-full max-w-md">
+        <div className="mb-10 flex justify-center">
           <Logo />
         </div>
 
-        <div className="relative z-10">
-          <h2 className="text-4xl font-light leading-snug mb-6" style={{ fontFamily: theme.fonts.serif, color: theme.colors.secondary.cream }}>
-            Untangle Your<br />
-            <h2 className= "font-semibold">Practice</h2>
-            Administration
-          </h2>
-          <p className="text-sm leading-relaxed opacity-80 italic" style={{ color: theme.colors.secondary.sage, fontFamily: theme.fonts.serif }}>
-            TherapEase helps therapists manage appointments, client records, payments and more, so you can focus on what matters most.
+        <div className="mb-8 text-center">
+          <h1
+            className="text-3xl font-light mb-1"
+            style={{ fontFamily: theme.fonts.serif, color: theme.colors.secondary.charcoal }}
+          >
+            Get started for free
+          </h1>
+          <p className="text-sm" style={{ color: theme.colors.gray[400], fontFamily: theme.fonts.serif }}>
+            Create your TherapEase account
           </p>
         </div>
 
-        <ul className="relative z-10 space-y-3 list-none">
-          <li className="text-sm opacity-90" style={{ color: theme.colors.secondary.sage, fontFamily: theme.fonts.serif }}>· Integrated Booking & Automated Reminders</li>
-          <li className="text-sm opacity-90" style={{ color: theme.colors.secondary.sage, fontFamily: theme.fonts.serif }}>· Secure Client Records & Session Notes</li>
-          <li className="text-sm opacity-90" style={{ color: theme.colors.secondary.sage, fontFamily: theme.fonts.serif }}>· Stripe Payments with Automatic Receipts</li>
-        </ul>
-      </div>
-
-      {/* Right form panel */}
-      <div className="flex-1 flex flex-col justify-center items-center px-6 py-12">
-        {/* Mobile logo */}
-        <div className="lg:hidden mb-10">
-          <Logo />
-        </div>
-
-        <div className="w-full max-w-md">
-          <div className="mb-8">
-            <h1
-              className="text-3xl font-light mb-1"
-              style={{ fontFamily: theme.fonts.serif, color: theme.colors.secondary.charcoal }}
-            >
-              Get started for free
-            </h1>
-            <p className="text-sm" style={{ color: theme.colors.gray[400], fontFamily: theme.fonts.serif }}>
-              Create your TherapEase account
-            </p>
+        {error && (
+          <div
+            className="mb-5 px-4 py-3 rounded-xl text-sm flex items-center gap-2"
+            style={{ backgroundColor: theme.colors.error.bg, color: theme.colors.error.text, border: `1px solid ${theme.colors.error.border}`, fontFamily: theme.fonts.serif }}
+          >
+            <span>⚠</span> {error}
           </div>
+        )}
 
-          {error && (
-            <div
-              className="mb-5 px-4 py-3 rounded-xl text-sm flex items-center gap-2"
-              style={{ backgroundColor: theme.colors.error.bg, color: theme.colors.error.text, border: `1px solid ${theme.colors.error.border}`, fontFamily: theme.fonts.serif }}
-            >
-              <span>⚠</span> {error}
-            </div>
-          )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <FloatingLabel
+            id="name" name="name" label="Full Name"
+            placeholder="Jane Smith"
+            value={formData.name} onChange={handleChange}
+          />
+          <FloatingLabel
+            id="email" name="email" type="email" label="Email"
+            placeholder="jane@example.com"
+            value={formData.email} onChange={handleChange}
+          />
+          <FloatingLabel
+            id="password" name="password" type="password" label="Password"
+            placeholder="At least 6 characters"
+            value={formData.password} onChange={handleChange}
+          />
+          <FloatingLabel
+            id="confirmPassword" name="confirmPassword" type="password" label="Confirm Password"
+            placeholder="Repeat your password"
+            value={formData.confirmPassword} onChange={handleChange}
+          />
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <FloatingLabel
-              id="name" name="name" label="Full Name"
-              placeholder="Jane Smith"
-              value={formData.name} onChange={handleChange}
-            />
-            <FloatingLabel
-              id="email" name="email" type="email" label="Email"
-              placeholder="jane@example.com"
-              value={formData.email} onChange={handleChange}
-            />
-            <FloatingLabel
-              id="password" name="password" type="password" label="Password"
-              placeholder="At least 6 characters"
-              value={formData.password} onChange={handleChange}
-            />
-            <FloatingLabel
-              id="confirmPassword" name="confirmPassword" type="password" label="Confirm Password"
-              placeholder="Repeat your password"
-              value={formData.confirmPassword} onChange={handleChange}
-            />
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-4 rounded-xl font-medium text-sm tracking-wide transition-all duration-200 mt-2"
+            style={{
+              backgroundColor: loading ? theme.colors.primary.light : theme.colors.primary.DEFAULT,
+              color: theme.colors.gray[50],
+              fontFamily: theme.fonts.serif,
+              letterSpacing: '0.04em',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              boxShadow: loading ? 'none' : '0 4px 14px rgba(107, 126, 90, 0.35)',
+            }}
+            onMouseEnter={e => { if (!loading) e.target.style.backgroundColor = theme.colors.primary.dark; }}
+            onMouseLeave={e => { if (!loading) e.target.style.backgroundColor = theme.colors.primary.DEFAULT; }}
+          >
+            {loading ? 'Creating Account…' : 'Sign Up'}
+          </button>
+        </form>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-4 rounded-xl font-medium text-sm tracking-wide transition-all duration-200 mt-2"
-              style={{
-                backgroundColor: loading ? theme.colors.primary.light : theme.colors.primary.DEFAULT,
-                color: theme.colors.gray[50],
-                fontFamily: theme.fonts.serif,
-                letterSpacing: '0.04em',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                boxShadow: loading ? 'none' : '0 4px 14px rgba(107, 126, 90, 0.35)',
-              }}
-              onMouseEnter={e => { if (!loading) e.target.style.backgroundColor = theme.colors.primary.dark; }}
-              onMouseLeave={e => { if (!loading) e.target.style.backgroundColor = theme.colors.primary.DEFAULT; }}
-            >
-              {loading ? 'Creating Account…' : 'Sign Up'}
-            </button>
-          </form>
+        <p className="text-center mt-6 text-sm" style={{ color: theme.colors.gray[400], fontFamily: theme.fonts.serif }}>
+          Already have an account?{' '}
+          <Link
+            to="/login"
+            className="font-semibold transition-colors"
+            style={{ color: theme.colors.primary.DEFAULT }}
+          >
+            Sign In
+          </Link>
+        </p>
 
-          <p className="text-center mt-6 text-sm" style={{ color: theme.colors.gray[400], fontFamily: theme.fonts.serif }}>
-            Already have an account?{' '}
-            <Link
-              to="/login"
-              className="font-semibold transition-colors"
-              style={{ color: theme.colors.primary.DEFAULT }}
-            >
-              Sign In
-            </Link>
+        {/* Tagline / testimonial */}
+        <div
+          className="mt-10 rounded-2xl p-6 text-center"
+          style={{ backgroundColor: 'rgba(107,126,90,0.08)', border: '1px solid rgba(107,126,90,0.15)' }}
+        >
+          <p className="text-sm leading-relaxed italic opacity-75" style={{ color: theme.colors.primary.darker, fontFamily: theme.fonts.serif }}>
+            TherapEase helps therapists manage appointments, client records, payments and more — so you can focus on what matters most.
           </p>
         </div>
       </div>

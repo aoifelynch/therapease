@@ -54,10 +54,13 @@ const Hero = () => {
   };
 
   return (
-    <section className="min-h-screen flex items-center pt-20" style={{ backgroundColor: theme.colors.secondary.cream }}>
-      <div className="max-w-6xl mx-auto px-6 w-full py-16 grid lg:grid-cols-2 gap-16 items-center">
+    <section className="min-h-screen flex items-center pt-20 relative overflow-hidden" style={{ backgroundColor: theme.colors.secondary.cream }}>
+      {/* Decorative circles */}
+      <div className="absolute -top-24 -left-24 w-80 h-80 rounded-full pointer-events-none" style={{ backgroundColor: theme.colors.primary.light, opacity: 0.55 }} />
+      <div className="absolute top-1/4 -right-16 w-64 h-64 rounded-full pointer-events-none" style={{ backgroundColor: theme.colors.primary.lighter, opacity: 0.5 }} />
+      <div className="absolute bottom-10 -left-10 w-40 h-40 rounded-full pointer-events-none" style={{ backgroundColor: theme.colors.primary.DEFAULT, opacity: 0.15 }} />
+      <div className="max-w-6xl mx-auto px-6 w-full py-16 grid lg:grid-cols-2 gap-16 items-center relative z-10">
         
-        {/* Left: headline + form */}
         <div>
           <p className="text-xs font-semibold tracking-widest uppercase mb-4" style={{ color: theme.colors.primary.DEFAULT }}>
             Practice Management Software
@@ -74,7 +77,7 @@ const Hero = () => {
 
           {/* Sign-up card */}
           <div className="rounded-2xl p-8 bg-white border" style={{ borderColor: theme.colors.secondary.beige }}>
-            <p className="font-serif font-semibold mb-5" style={{ color: theme.colors.secondary.charcoal }}>
+            <p className="font-semibold mb-5" style={{ color: theme.colors.secondary.charcoal }}>
               Get started for free
             </p>
             <form onSubmit={handleSubmit} className="space-y-3">
@@ -95,9 +98,8 @@ const Hero = () => {
           </div>
         </div>
 
-        {/* Right: illustration + benefits */}
         <div className="flex flex-col items-center gap-8">
-          <img src="../public/landingpage.png" alt="TherapEase platform" className="w-full rounded-3xl shadow-lg" />
+          <img src="../admin.png" alt="TherapEase platform" className="w-full rounded-3xl" />
           
           {/* Benefits */}
           <div className="w-full">
@@ -128,18 +130,21 @@ const Hero = () => {
   );
 };
 
-/* ─── Features Section ─── */
 const Features = () => (
-  <section id="features" className="py-24" style={{ backgroundColor: theme.colors.secondary.cream }}>
-    <div className="max-w-6xl mx-auto px-6">
+  <section id="features" className="py-24 relative overflow-hidden" style={{ backgroundColor: theme.colors.primary.DEFAULT }}>
+    {/* Circles */}
+    <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full pointer-events-none" style={{ backgroundColor: theme.colors.primary.lighter, opacity: 0.2 }} />
+    <div className="absolute bottom-0 -left-12 w-56 h-56 rounded-full pointer-events-none" style={{ backgroundColor: theme.colors.primary.darker, opacity: 0.25 }} />
+    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full pointer-events-none" style={{ backgroundColor: 'rgba(255,255,255,0.04)' }} />
+    <div className="max-w-6xl mx-auto px-6 relative z-10">
       <div className="text-center mb-16">
-        <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: theme.colors.primary.DEFAULT }}>
+        <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: theme.colors.primary.lighter }}>
           Everything You Need
         </p>
-        <h2 className="text-4xl font-bold font-serif mb-4" style={{ color: theme.colors.secondary.charcoal }}>
+        <h2 className="text-4xl font-bold font-serif mb-4" style={{ color: theme.colors.secondary.cream }}>
           Built for Therapists
         </h2>
-        <p className="max-w-xl mx-auto text-base" style={{ color: '#5A6A50' }}>
+        <p className="max-w-xl mx-auto text-base" style={{ color: 'rgba(245,240,232,0.75)' }}>
           Every feature is thoughtfully crafted around the real workflows of private practice therapists.
         </p>
       </div>
@@ -153,12 +158,12 @@ const Features = () => (
           { icon: '📊', title: 'Revenue Reports', desc: 'Clear picture of practice income week by week.' },
           { icon: '🔔', title: 'Reminders', desc: 'Get notified for missing notes and unpaid sessions.' },
         ].map((f, i) => (
-          <div key={i} className="bg-white rounded-2xl p-8 border transition-transform hover:shadow-lg" style={{ borderColor: theme.colors.secondary.beige }}>
+          <div key={i} className="rounded-2xl p-8 border transition-transform hover:shadow-xl" style={{ backgroundColor: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.15)' }}>
             <div className="text-3xl mb-4">{f.icon}</div>
-            <h3 className="font-bold mb-2" style={{ color: theme.colors.secondary.charcoal }}>
+            <h3 className="font-bold mb-2" style={{ color: theme.colors.secondary.cream }}>
               {f.title}
             </h3>
-            <p className="text-sm" style={{ color: '#6B7A60' }}>
+            <p className="text-sm" style={{ color: 'rgba(245,240,232,0.7)' }}>
               {f.desc}
             </p>
           </div>
@@ -170,8 +175,11 @@ const Features = () => (
 
 /* ─── About Section ─── */
 const About = () => (
-  <section id="about" className="py-24" style={{ backgroundColor: theme.colors.secondary.cream }}>
-    <div className="max-w-4xl mx-auto px-6 text-center">
+  <section id="about" className="py-24 relative overflow-hidden" style={{ backgroundColor: theme.colors.secondary.cream }}>
+    {/* Circles */}
+    <div className="absolute top-12 -right-12 w-52 h-52 rounded-full pointer-events-none" style={{ backgroundColor: theme.colors.primary.lighter, opacity: 0.5 }} />
+    <div className="absolute bottom-12 -left-12 w-52 h-52 rounded-full pointer-events-none" style={{ backgroundColor: theme.colors.primary.light, opacity: 0.45 }} />
+    <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
       <p className="text-xs font-semibold tracking-widest uppercase mb-4" style={{ color: theme.colors.primary.DEFAULT }}>
         About TherapEase
       </p>
@@ -183,7 +191,7 @@ const About = () => (
         TherapEase was created after seeing how much time therapists lose each week to scheduling, chasing payments, and managing paperwork. We built one calm, focused tool that handles all of it.
       </p>
 
-      <div className="bg-white rounded-3xl p-10 border" style={{ borderColor: theme.colors.secondary.beige }}>
+      <div className="bg-white rounded-3xl p-10 border shadow-sm" style={{ borderColor: theme.colors.secondary.beige }}>
         <p className="font-serif text-lg italic mb-4" style={{ color: theme.colors.secondary.charcoal }}>
           "TherapEase freed up hours each week I was spending on admin. Now I can focus entirely on my clients. The payment links alone have transformed how I run my practice."
         </p>
@@ -206,34 +214,45 @@ const Contact = () => {
   };
 
   return (
-    <section id="contact" className="py-24" style={{ backgroundColor: theme.colors.secondary.beige }}>
-      <div className="max-w-xl mx-auto px-6">
+    <section id="contact" className="py-24 relative overflow-hidden" style={{ backgroundColor: theme.colors.primary.DEFAULT }}>
+      {/* Circles */}
+      <div className="absolute top-16 -left-16 w-60 h-60 rounded-full pointer-events-none" style={{ backgroundColor: theme.colors.primary.darker, opacity: 0.35 }} />
+      <div className="absolute bottom-16 -right-16 w-60 h-60 rounded-full pointer-events-none" style={{ backgroundColor: theme.colors.primary.light, opacity: 0.25 }} />
+      <div className="max-w-xl mx-auto px-6 relative z-10">
         <div className="text-center mb-10">
-          <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: theme.colors.primary.DEFAULT }}>
+          <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: theme.colors.primary.lighter }}>
             Get In Touch
           </p>
-          <h2 className="text-3xl font-bold font-serif" style={{ color: theme.colors.secondary.charcoal }}>
+          <h2 className="text-3xl font-bold font-serif" style={{ color: theme.colors.secondary.cream }}>
             Have a question?
           </h2>
         </div>
 
         {sent ? (
-          <div className="bg-white rounded-2xl p-8 text-center border" style={{ borderColor: theme.colors.primary.lighter }}>
+          <div className="rounded-2xl p-8 text-center border" style={{ backgroundColor: 'rgba(255,255,255,0.07)', borderColor: 'rgba(255,255,255,0.15)' }}>
             <p className="text-4xl mb-3">🌿</p>
-            <p className="font-serif font-semibold mb-2" style={{ color: theme.colors.secondary.charcoal }}>
+            <p className="font-serif font-semibold mb-2" style={{ color: theme.colors.secondary.cream }}>
               Message sent!
             </p>
-            <p className="text-sm" style={{ color: theme.colors.gray[400] }}>
+            <p className="text-sm" style={{ color: 'rgba(245,240,232,0.6)' }}>
               We'll get back to you within 24 hours.
             </p>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl p-8 border" style={{ borderColor: theme.colors.secondary.beige }}>
+          <div className="rounded-2xl p-8 border" style={{ backgroundColor: 'rgba(255,255,255,0.1)', borderColor: 'rgba(255,255,255,0.25)' }}>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <input className="w-full px-4 py-3 border rounded-lg text-sm focus:outline-none" placeholder="Your name" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} style={{ borderColor: theme.colors.secondary.beige }} />
-              <input className="w-full px-4 py-3 border rounded-lg text-sm focus:outline-none" type="email" placeholder="Your email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} style={{ borderColor: theme.colors.secondary.beige }} />
-              <textarea className="w-full px-4 py-3 border rounded-lg text-sm focus:outline-none" placeholder="How can we help?" rows={5} value={form.message} onChange={e => setForm(p => ({ ...p, message: e.target.value }))} style={{ borderColor: theme.colors.secondary.beige }} />
-              <button type="submit" className="w-full py-3 text-white font-medium rounded-lg text-sm" style={{ backgroundColor: theme.colors.primary.DEFAULT }}>
+              <input className="w-full px-4 py-3 border rounded-lg text-sm focus:outline-none placeholder-[rgba(245,240,232,0.5)]" placeholder="Your name" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} style={{ borderColor: 'rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.15)', color: theme.colors.secondary.cream }} />
+              <input className="w-full px-4 py-3 border rounded-lg text-sm focus:outline-none placeholder-[rgba(245,240,232,0.5)]" type="email" placeholder="Your email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} style={{ borderColor: 'rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.15)', color: theme.colors.secondary.cream }} />
+              <textarea className="w-full px-4 py-3 border rounded-lg text-sm focus:outline-none placeholder-[rgba(245,240,232,0.5)]" placeholder="How can we help?" rows={5} value={form.message} onChange={e => setForm(p => ({ ...p, message: e.target.value }))} style={{ borderColor: 'rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.15)', color: theme.colors.secondary.cream }} />
+              <button
+                type="submit"
+                className="w-full py-3 font-medium rounded-lg text-sm transition-all duration-150"
+                style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: theme.colors.secondary.cream, border: '1px solid rgba(255,255,255,0.35)' }}
+                onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.32)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.55)'; }}
+                onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)'; }}
+                onMouseDown={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.45)'; }}
+                onMouseUp={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.32)'; }}
+              >
                 Send Message
               </button>
             </form>
@@ -244,17 +263,16 @@ const Contact = () => {
   );
 };
 
-/* ─── Footer ─── */
 const Footer = () => (
-  <footer className="py-10 border-t" style={{ backgroundColor: theme.colors.secondary.charcoal, borderColor: 'rgba(200,213,185,0.15)' }}>
+  <footer className="py-10 border-t" style={{ backgroundColor: theme.colors.secondary.cream, borderColor: 'rgba(200,213,185,0.15)' }}>
     <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
       <Logo />
-      <p className="text-xs" style={{ color: 'rgba(245,240,232,0.5)' }}>
+      <p className="text-xs" style={{ color: theme.colors.primary.DEFAULT }}>
         © {new Date().getFullYear()} TherapEase. All rights reserved.
       </p>
       <div className="flex gap-6">
         {['Privacy', 'Terms', 'Contact'].map(item => (
-          <a key={item} href="#" className="text-xs transition-colors hover:text-white" style={{ color: 'rgba(245,240,232,0.5)' }}>
+          <a key={item} href="#" className="text-xs transition-colors hover:text-white" style={{ color: theme.colors.primary.DEFAULT }}>
             {item}
           </a>
         ))}

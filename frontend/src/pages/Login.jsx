@@ -40,114 +40,82 @@ export const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: theme.colors.secondary.cream }}>
-      {/* Left panel */}
-      <div
-        className="hidden lg:flex lg:w-5/12 flex-col justify-between p-12 relative overflow-hidden"
-        style={{ backgroundColor: theme.colors.primary.DEFAULT }}
-      >
-        {/* Background circles */}
-        <div className="absolute -top-16 -left-16 w-64 h-64 rounded-full opacity-20" style={{ backgroundColor: theme.colors.primary.light }} />
-        <div className="absolute bottom-24 -right-12 w-48 h-48 rounded-full opacity-15" style={{ backgroundColor: theme.colors.primary.darker }} />
-        <div className="absolute top-1/2 left-1/4 w-32 h-32 rounded-full opacity-10" style={{ backgroundColor: theme.colors.primary.lighter }} />
+    <div className="min-h-screen flex flex-col justify-center items-center relative overflow-hidden px-6 py-12" style={{ backgroundColor: theme.colors.secondary.cream }}>
+      {/* Background circles spread across the full page */}
+      <div className="absolute -top-20 -left-20 w-72 h-72 rounded-full pointer-events-none" style={{ backgroundColor: theme.colors.primary.light, opacity: 0.6 }} />
+      <div className="absolute -bottom-16 -right-16 w-64 h-64 rounded-full pointer-events-none" style={{ backgroundColor: theme.colors.primary.darker, opacity: 0.5 }} />
+      <div className="absolute top-1/3 -right-10 w-48 h-48 rounded-full pointer-events-none" style={{ backgroundColor: theme.colors.primary.lighter, opacity: 0.55 }} />
+      <div className="absolute bottom-1/3 -left-10 w-40 h-40 rounded-full pointer-events-none" style={{ backgroundColor: theme.colors.primary.DEFAULT, opacity: 0.2 }} />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full pointer-events-none" style={{ backgroundColor: theme.colors.primary.lighter, opacity: 0.15 }} />
 
-        <div className="relative z-10">
+      {/* Content */}
+      <div className="relative z-10 w-full max-w-md">
+        <div className="mb-10 flex justify-center">
           <Logo />
         </div>
 
-        <div className="relative z-10">
-          <h2 className="text-4xl font-light leading-snug mb-6" style={{ fontFamily: theme.fonts.serif, color: theme.colors.secondary.cream }}>
-            Welcome<br />
-            <em className="not-italic font-semibold">back</em>
-          </h2>
-          <p className="text-sm leading-relaxed opacity-80" style={{ color: theme.colors.secondary.sage, fontFamily: theme.fonts.serif }}>
-            Your clients, calendar, and payments — all in one place, ready when you are.
+        <div className="mb-8 text-center">
+          <h1
+            className="text-3xl font-light mb-1"
+            style={{ fontFamily: theme.fonts.serif, color: theme.colors.secondary.charcoal }}
+          >
+            Sign in
+          </h1>
+          <p className="text-sm" style={{ color: theme.colors.gray[400], fontFamily: theme.fonts.serif }}>
+            Welcome back to TherapEase
           </p>
         </div>
 
-        {/* Testimonial */}
-        <div
-          className="relative z-10 rounded-2xl p-6"
-          style={{ backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)' }}
-        >
-          <p className="text-sm italic leading-relaxed mb-2 opacity-90" style={{ color: theme.colors.secondary.sage, fontFamily: theme.fonts.serif }}>
-            "TherapEase freed up hours each week I was spending on admin. Now I can focus entirely on my clients."
-          </p>
-          <p className="text-xs font-semibold" style={{ color: theme.colors.secondary.sage, fontFamily: theme.fonts.serif }}>Aoife Lynch &mdash; Psychotherapist, Dublin</p>
-        </div>
-      </div>
-
-      {/* Right form panel */}
-      <div className="flex-1 flex flex-col justify-center items-center px-6 py-12">
-        {/* Mobile logo */}
-        <div className="lg:hidden mb-10">
-          <Logo />
-        </div>
-
-        <div className="w-full max-w-md">
-          <div className="mb-8">
-            <h1
-              className="text-3xl font-light mb-1"
-              style={{ fontFamily: theme.fonts.serif, color: theme.colors.secondary.charcoal }}
-            >
-              Sign in
-            </h1>
-            <p className="text-sm" style={{ color: theme.colors.gray[400], fontFamily: theme.fonts.serif }}>
-              Welcome back to TherapEase
-            </p>
+        {error && (
+          <div
+            className="mb-5 px-4 py-3 rounded-xl text-sm flex items-center gap-2"
+            style={{ backgroundColor: theme.colors.error.bg, color: theme.colors.error.text, border: `1px solid ${theme.colors.error.border}`, fontFamily: theme.fonts.serif }}
+          >
+            <span>⚠</span> {error}
           </div>
+        )}
 
-          {error && (
-            <div
-              className="mb-5 px-4 py-3 rounded-xl text-sm flex items-center gap-2"
-              style={{ backgroundColor: theme.colors.error.bg, color: theme.colors.error.text, border: `1px solid ${theme.colors.error.border}`, fontFamily: theme.fonts.serif }}
-            >
-              <span>⚠</span> {error}
-            </div>
-          )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <FloatingLabel
+            id="email" name="email" type="email" label="Email"
+            placeholder="jane@example.com"
+            value={formData.email} onChange={handleChange}
+          />
+          <FloatingLabel
+            id="password" name="password" type="password" label="Password"
+            placeholder="Your password"
+            value={formData.password} onChange={handleChange}
+          />
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <FloatingLabel
-              id="email" name="email" type="email" label="Email"
-              placeholder="jane@example.com"
-              value={formData.email} onChange={handleChange}
-            />
-            <FloatingLabel
-              id="password" name="password" type="password" label="Password"
-              placeholder="Your password"
-              value={formData.password} onChange={handleChange}
-            />
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-4 rounded-xl font-medium text-sm tracking-wide transition-all duration-200"
+            style={{
+              backgroundColor: loading ? theme.colors.primary.light : theme.colors.primary.DEFAULT,
+              color: theme.colors.gray[50],
+              fontFamily: theme.fonts.serif,
+              letterSpacing: '0.04em',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              boxShadow: loading ? 'none' : '0 4px 14px rgba(107, 126, 90, 0.35)',
+            }}
+            onMouseEnter={e => { if (!loading) e.target.style.backgroundColor = theme.colors.primary.dark; }}
+            onMouseLeave={e => { if (!loading) e.target.style.backgroundColor = theme.colors.primary.DEFAULT; }}
+          >
+            {loading ? 'Signing in…' : 'Sign In'}
+          </button>
+        </form>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-4 rounded-xl font-medium text-sm tracking-wide transition-all duration-200"
-              style={{
-                backgroundColor: loading ? theme.colors.primary.light : theme.colors.primary.DEFAULT,
-                color: theme.colors.gray[50],
-                fontFamily: theme.fonts.serif,
-                letterSpacing: '0.04em',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                boxShadow: loading ? 'none' : '0 4px 14px rgba(107, 126, 90, 0.35)',
-              }}
-              onMouseEnter={e => { if (!loading) e.target.style.backgroundColor = theme.colors.primary.dark; }}
-              onMouseLeave={e => { if (!loading) e.target.style.backgroundColor = theme.colors.primary.DEFAULT; }}
-            >
-              {loading ? 'Signing in…' : 'Sign In'}
-            </button>
-          </form>
-
-          <p className="text-center mt-6 text-sm" style={{ color: theme.colors.gray[400], fontFamily: theme.fonts.serif }}>
-            Don't have an account?{' '}
-            <Link
-              to="/register"
-              className="font-semibold transition-colors"
-              style={{ color: theme.colors.primary.DEFAULT }}
-            >
-              Get started for free
-            </Link>
-          </p>
-        </div>
+        <p className="text-center mt-6 text-sm" style={{ color: theme.colors.gray[400], fontFamily: theme.fonts.serif }}>
+          Don't have an account?{' '}
+          <Link
+            to="/register"
+            className="font-semibold transition-colors"
+            style={{ color: theme.colors.primary.DEFAULT }}
+          >
+            Get started for free
+          </Link>
+        </p>
       </div>
     </div>
   );
