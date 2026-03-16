@@ -104,7 +104,7 @@ export const appointmentsAPI = {
   },
 
   async update(appointmentId, appointmentData) {
-    const response = await api.put(`/appointments/${appointmentId}`, appointmentData);
+    const response = await api.patch(`/appointments/${appointmentId}`, appointmentData);
     return response.data;
   },
 
@@ -212,6 +212,29 @@ export const remindersAPI = {
     const response = await api.post('/reminders', reminderData);
     return response.data;
   }
+};
+
+// Todos API
+export const todosAPI = {
+  async getAll() {
+    const response = await api.get('/todos');
+    return response.data;
+  },
+
+  async create(todoData) {
+    const response = await api.post('/todos', todoData);
+    return response.data;
+  },
+
+  async update(todoId, todoData) {
+    const response = await api.patch(`/todos/${todoId}`, todoData);
+    return response.data;
+  },
+
+  async delete(todoId) {
+    const response = await api.delete(`/todos/${todoId}`);
+    return response.data;
+  },
 };
 
 export default api;

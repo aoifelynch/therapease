@@ -199,6 +199,49 @@ export const appointmentSchema = {
   }
 };
 
+export const appointmentUpdateSchema = {
+  clientId: {
+    in: ['body'],
+    optional: true,
+    custom: {
+      options: isObjectId,
+      errorMessage: "'clientId' must be a valid ObjectId"
+    }
+  },
+  date: {
+    in: ['body'],
+    optional: true,
+    isISO8601: { errorMessage: "'date' must be an ISO8601 date" }
+  },
+  startTime: {
+    in: ['body'],
+    optional: true,
+    isString: { errorMessage: "'startTime' must be a string" },
+    isLength: { options: { max: 20 }, errorMessage: "'startTime' max length is 20 chars" }
+  },
+  endTime: {
+    in: ['body'],
+    optional: true,
+    isString: { errorMessage: "'endTime' must be a string" },
+    isLength: { options: { max: 20 }, errorMessage: "'endTime' max length is 20 chars" }
+  },
+  type: {
+    in: ['body'],
+    optional: true,
+    isIn: { options: [['in-person', 'online']], errorMessage: "'type' must be 'in-person' or 'online'" }
+  },
+  zoomLink: {
+    in: ['body'],
+    optional: { options: { nullable: true, checkFalsy: true } },
+    isURL: { errorMessage: "'zoomLink' must be a valid URL" }
+  },
+  status: {
+    in: ['body'],
+    optional: true,
+    isIn: { options: [['upcoming', 'completed', 'cancelled']], errorMessage: "'status' must be 'upcoming', 'completed', or 'cancelled'" }
+  }
+};
+
 export const appointmentIdParam = {
   id: {
     in: ['params'],
@@ -208,6 +251,7 @@ export const appointmentIdParam = {
     }
   }
 };
+
 
 // Note validators
 export const noteSchema = {
@@ -330,4 +374,36 @@ export const reminderSchema = {
     optional: true,
     isIn: { options: [['pending', 'sent', 'cancelled']], errorMessage: "'status' must be 'pending', 'sent', or 'cancelled'" }
   }
+};
+
+export const todoCreateSchema = {
+  title: {
+    in: ['body'],
+    notEmpty: { errorMessage: "'title' field is required" },
+    isString: { errorMessage: "'title' must be a string" },
+    isLength: { options: { min: 1, max: 200 }, errorMessage: "'title' must be 1-200 chars" },
+    trim: true,
+  },
+  completed: {
+    in: ['body'],
+    optional: true,
+    isBoolean: { errorMessage: "'completed' must be a boolean" },
+    toBoolean: true,
+  },
+};
+
+export const todoUpdateSchema = {
+  title: {
+    in: ['body'],
+    optional: true,
+    isString: { errorMessage: "'title' must be a string" },
+    isLength: { options: { min: 1, max: 200 }, errorMessage: "'title' must be 1-200 chars" },
+    trim: true,
+  },
+  completed: {
+    in: ['body'],
+    optional: true,
+    isBoolean: { errorMessage: "'completed' must be a boolean" },
+    toBoolean: true,
+  },
 };

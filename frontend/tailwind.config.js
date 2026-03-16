@@ -30,7 +30,7 @@ export default {
         }
       },
       fontFamily: {
-        serif: ['Georgia', 'serif'],
+        serif: ['system-ui', 'sans-serif'],
         sans: ['system-ui', 'sans-serif'],
       },
       backgroundImage: {

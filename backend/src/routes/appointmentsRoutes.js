@@ -2,7 +2,7 @@ import { Router } from 'express';
 import * as appointmentsController from '../controllers/appointmentsController.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { validate } from '../middleware/validateRequest.js';
-import { appointmentSchema, objectIdParam } from '../utils/validators.js';
+import { appointmentSchema, appointmentUpdateSchema, objectIdParam } from '../utils/validators.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
 const router = Router();
@@ -26,9 +26,9 @@ router.post('/',
 );
 
 // UPDATE appointment
-router.put('/:appointmentId',
+router.patch('/:appointmentId',
   validate(objectIdParam('appointmentId')),
-  validate(appointmentSchema),
+  validate(appointmentUpdateSchema),
   asyncHandler(appointmentsController.updateAppointment)
 );
 

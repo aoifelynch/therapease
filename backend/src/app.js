@@ -10,6 +10,7 @@ import filesRoutes from "./routes/filesRoutes.js";
 import notesRoutes from "./routes/notesRoutes.js";
 import paymentsRoutes from "./routes/paymentsRoutes.js";
 import remindersRoutes from "./routes/remindersRoutes.js";
+import todosRoutes from './routes/todosRoutes.js';
 import authRoutes from "./routes/authRoutes.js";
 import { errorHandler, unknownEndpoint } from './middleware/error.js';
 import twoFactorRoutes from "./routes/twoFactorRoutes.js";
@@ -53,6 +54,7 @@ const createApp = () => {
     app.use("/api/notes", notesRoutes);
     app.use("/api/payments", paymentsRoutes);
     app.use("/api/reminders", remindersRoutes);
+    app.use('/api/todos', todosRoutes);
     app.use("/api/auth", authRoutes);
     app.use("/api/2fa", twoFactorRoutes);
 

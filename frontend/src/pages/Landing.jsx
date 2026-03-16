@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Logo } from '../components/Logo';
 import { theme } from '../utils/theme';
+import { authAPI } from '../api/api';
+import { useAuth } from '../context/AuthContext';
 
 /* ─── Navbar ─── */
 const Navbar = () => {
@@ -44,13 +46,38 @@ const Navbar = () => {
 /* ─── Hero Section ─── */
 const Hero = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => setFormData(p => ({ ...p, [e.target.name]: e.target.value }));
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    navigate('/register', { state: formData });
+    setError('');
+    if (!formData.name || !formData.email || !formData.password) {
+      setError('All fields are required');
+      return;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await authAPI.register(formData.email, formData.password, formData.name);
+      login(response.user, response.accessToken, response.refreshToken);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -80,13 +107,23 @@ const Hero = () => {
             <p className="font-semibold mb-5" style={{ color: theme.colors.secondary.charcoal }}>
               Get started for free
             </p>
+            {error && (
+              <div className="mb-4 px-4 py-3 rounded-xl text-sm flex items-center gap-2" style={{ backgroundColor: theme.colors.error.bg, color: theme.colors.error.text, border: `1px solid ${theme.colors.error.border}` }}>
+                <span>⚠</span> {error}
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-3">
               <input className="w-full px-4 py-3 border rounded-lg text-sm focus:outline-none transition-colors" placeholder="Full Name" name="name" value={formData.name} onChange={handleChange} style={{ borderColor: theme.colors.secondary.beige, color: theme.colors.secondary.charcoal }} />
               <input className="w-full px-4 py-3 border rounded-lg text-sm focus:outline-none transition-colors" placeholder="Email" name="email" type="email" value={formData.email} onChange={handleChange} style={{ borderColor: theme.colors.secondary.beige, color: theme.colors.secondary.charcoal }} />
               <input className="w-full px-4 py-3 border rounded-lg text-sm focus:outline-none transition-colors" placeholder="Password" name="password" type="password" value={formData.password} onChange={handleChange} style={{ borderColor: theme.colors.secondary.beige, color: theme.colors.secondary.charcoal }} />
               <input className="w-full px-4 py-3 border rounded-lg text-sm focus:outline-none transition-colors" placeholder="Confirm Password" name="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleChange} style={{ borderColor: theme.colors.secondary.beige, color: theme.colors.secondary.charcoal }} />
-              <button type="submit" className="w-full py-3 text-white font-medium rounded-lg transition-colors text-sm" style={{ backgroundColor: theme.colors.primary.DEFAULT }}>
-                Sign Up
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 text-white font-medium rounded-lg transition-colors text-sm"
+                style={{ backgroundColor: loading ? theme.colors.primary.light : theme.colors.primary.DEFAULT, cursor: loading ? 'not-allowed' : 'pointer' }}
+              >
+                {loading ? 'Creating Account…' : 'Sign Up'}
               </button>
             </form>
             <p className="text-center mt-4 text-sm" style={{ color: theme.colors.gray[400] }}>

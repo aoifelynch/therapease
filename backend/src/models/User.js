@@ -6,6 +6,7 @@ import File from "./File.js";
 import Note from "./Note.js";
 import Payment from "./Payment.js";
 import Reminder from "./Reminder.js";
+import Todo from './Todo.js';
 
 const userSchema = new mongoose.Schema(
   {
@@ -79,6 +80,7 @@ userSchema.pre("findOneAndDelete", async function (next) {
   await Promise.all([
     Appointment.deleteMany({ user: userId }),
     Reminder.deleteMany({ user: userId }),
+    Todo.deleteMany({ user: userId }),
     Client.deleteMany({ user: userId })
   ]);
 

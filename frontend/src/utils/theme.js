@@ -35,7 +35,7 @@ export const colors = {
 };
 
 export const fonts = {
-  serif: "'Georgia', serif",
+  serif: "system-ui, sans-serif",
   sans: "system-ui, sans-serif",
 };
 

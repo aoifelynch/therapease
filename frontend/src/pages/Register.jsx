@@ -69,7 +69,7 @@ export const Register = () => {
 
         <div className="mb-8 text-center">
           <h1
-            className="text-3xl font-light mb-1"
+            className="text-3xl font-medium mb-1"
             style={{ fontFamily: theme.fonts.serif, color: theme.colors.secondary.charcoal }}
           >
             Get started for free
