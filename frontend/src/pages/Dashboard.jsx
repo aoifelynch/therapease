@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Logo } from '../components/Logo';
+import { AppSidebar } from '../components/AppSidebar';
 import { appointmentsAPI, clientsAPI, paymentsAPI, remindersAPI, todosAPI } from '../api/api';
 import { useAuth } from '../context/AuthContext';
 import { theme } from '../utils/theme';
 import { withAlpha, isSameDay, startOfWeek, startOfMonth, formatCurrency, formatLongDate, formatClock, formatTime, getClientName } from '../utils/formatters';
 import { componentStyles } from '../utils/componentStyles';
-import { navItems, quickActions } from '../constants/sidebarConstants';
+import { quickActions } from '../constants/sidebarConstants';
 import {
-  DashboardIcon, CalendarIcon, ClientsIcon, PaymentsIcon, ReportsIcon,
-  SettingsIcon, ExternalLinkIcon, EditIcon, CheckIcon, ArrowUpIcon, TrashIcon,
+  ExternalLinkIcon, EditIcon, CheckIcon, ArrowUpIcon, TrashIcon,
 } from '../utils/icons';
 
 export function Dashboard() {
@@ -64,9 +63,29 @@ export function Dashboard() {
   }, []);
 
   // Filters and calculations
+  const toAppointmentDateTime = (appointment, timeValue) => {
+    if (!appointment?.date || !timeValue) return null;
+
+    const [hours, minutes] = String(timeValue).split(':').map(Number);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+
+    const value = new Date(appointment.date);
+    value.setHours(hours, minutes, 0, 0);
+    return Number.isNaN(value.getTime()) ? null : value;
+  };
+
   const todayAppointments = appointments.filter((appointment) => isSameDay(new Date(appointment.date), now));
-  const upcomingAppointments = (todayAppointments.length ? todayAppointments : appointments)
-    .filter((appointment) => appointment.status !== 'completed')
+  const upcomingAppointments = todayAppointments
+    .filter((appointment) => {
+      if (appointment.status !== 'upcoming') return false;
+      const appointmentEndTime = toAppointmentDateTime(appointment, appointment.endTime);
+      return appointmentEndTime ? appointmentEndTime > now : false;
+    })
+    .sort((first, second) => {
+      const firstEnd = toAppointmentDateTime(first, first.endTime)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      const secondEnd = toAppointmentDateTime(second, second.endTime)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      return firstEnd - secondEnd;
+    })
     .slice(0, 5);
   const pendingPayments = payments.filter((payment) => payment.status === 'pending');
   const paidPayments = payments.filter((payment) => payment.status === 'paid');
@@ -164,7 +183,6 @@ export function Dashboard() {
       setTodoBusyId(null);
     }
   };
-
   const handleDeleteTodo = async (todoId) => {
     setTodoBusyId(todoId);
     setError('');
@@ -182,64 +200,7 @@ export function Dashboard() {
   // Render
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: theme.colors.secondary.cream, color: theme.colors.secondary.charcoal, fontFamily: theme.fonts.sans }}>
-      {/* Sidebar - Navigation and account section */}
-      <aside
-        className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col px-5 py-8 md:flex"
-        style={{
-          backgroundColor: theme.colors.gray[50],
-          borderRight: `1px solid ${withAlpha(theme.colors.secondary.beige, 0.85)}`,
-        }}
-      >
-        <div className="mb-10 flex flex-col items-center gap-4">
-          <Logo className="justify-center" />
-        </div>
-
-        <nav className="flex flex-1 flex-col gap-1.5">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeNav === item.label;
-
-            return (
-              <button
-                key={item.label}
-                type="button"
-                onClick={() => setActiveNav(item.label)}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-md font-medium transition-colors"
-                style={{
-                  backgroundColor: isActive ? withAlpha(theme.colors.primary.lighter, 0.45) : 'transparent',
-                  color: isActive ? theme.colors.primary.darker : withAlpha(theme.colors.secondary.charcoal, 0.7),
-                }}
-              >
-                <span style={{ color: isActive ? theme.colors.primary.DEFAULT : withAlpha(theme.colors.secondary.charcoal, 0.65) }}>
-                  <Icon />
-                </span>
-                {item.label}
-              </button>
-            );
-          })}
-        </nav>
-
-        <div className="mt-6 border-t pt-4" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9) }}>
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
-                {user?.name || 'Therapist'}
-              </p>
-              <p className="text-xs" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.55) }}>
-                {user?.email || 'Signed in'}
-              </p>
-            </div>
-            <button
-              type="button"
-              aria-label="Settings"
-              className="rounded-full p-2 transition-colors"
-              style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.55), backgroundColor: withAlpha(theme.colors.secondary.beige, 0.35) }}
-            >
-              <SettingsIcon />
-            </button>
-          </div>
-        </div>
-      </aside>
+      <AppSidebar activeNav={activeNav} onNavSelect={setActiveNav} user={user} />
 
       {/* Main content area */}
       <main className="h-screen flex-1 overflow-y-auto">
