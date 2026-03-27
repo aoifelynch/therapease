@@ -10,6 +10,9 @@ const router = Router();
 // All note routes require authentication
 router.use(authenticate);
 
+// GET all notes
+router.get('/', asyncHandler(notesController.getNotes));
+
 // GET single note
 router.get('/:noteId', 
   validate(objectIdParam('noteId')), 

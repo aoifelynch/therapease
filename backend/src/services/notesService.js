@@ -2,6 +2,15 @@ import Note from '../models/Note.js';
 import { HttpError, NOT_FOUND, FORBIDDEN, BAD_REQUEST } from '../utils/HttpError.js';
 
 export default {
+  // Get all notes for a user's clients
+  async getAllNotes(userId) {
+    const notes = await Note.find()
+      .populate('client')
+      .exec();
+
+    return notes.filter((note) => note.client && note.client.user.toString() === userId.toString());
+  },
+
   // Get a single note by ID
   async getNoteById(noteId, userId) {
     const note = await Note.findById(noteId)

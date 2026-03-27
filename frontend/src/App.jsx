@@ -6,6 +6,8 @@ import { Login } from './pages/Login';
 import { Verify2FA } from './pages/Verify2FA';
 import { Setup2FA } from './pages/Setup2FA';
 import { Dashboard } from './pages/Dashboard';
+import { ClientList } from './pages/ClientList';
+import { ClientProfile } from './pages/ClientProfile';
 import { LandingPage } from './pages/Landing';
 
 function App() {
@@ -30,6 +32,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/clients"
+            element={
+              <ProtectedRoute>
+                <ClientList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/clients/:clientId"
+            element={
+              <ProtectedRoute>
+                <ClientProfile />
               </ProtectedRoute>
             }
           />

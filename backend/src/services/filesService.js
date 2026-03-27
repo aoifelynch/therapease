@@ -3,6 +3,15 @@ import Client from '../models/Client.js';
 import { HttpError, NOT_FOUND, FORBIDDEN, BAD_REQUEST } from '../utils/HttpError.js';
 
 export default {
+  // Get all files for a user's clients
+  async getAllFiles(userId) {
+    const files = await File.find()
+      .populate('client')
+      .exec();
+
+    return files.filter((file) => file.client && file.client.user.toString() === userId.toString());
+  },
+
   // Upload a new file for a client
   async uploadFile(fileData, userId) {
     const { clientId } = fileData;

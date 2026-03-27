@@ -191,7 +191,7 @@ const Features = () => (
           { icon: '📅', title: 'Smart Scheduling', desc: 'Book sessions, send reminders, never miss an appointment.' },
           { icon: '👤', title: 'Client Records', desc: 'Secure, GDPR-compliant profiles with notes and history.' },
           { icon: '💳', title: 'Stripe Payments', desc: 'Send payment links, generate invoices, track balances.' },
-          { icon: '📝', title: 'Session Notes', desc: 'SOAP, DAP, BIRP templates that auto-save to profiles.' },
+          { icon: '📝', title: 'Session Notes', desc: 'SOAP, DAP, BIRP, and PIP templates that auto-save to profiles.' },
           { icon: '📊', title: 'Revenue Reports', desc: 'Clear picture of practice income week by week.' },
           { icon: '🔔', title: 'Reminders', desc: 'Get notified for missing notes and unpaid sessions.' },
         ].map((f, i) => (

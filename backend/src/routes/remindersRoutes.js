@@ -10,6 +10,9 @@ const router = Router();
 // All reminder routes require authentication
 router.use(authenticate);
 
+// GET computed issues for dashboard/client actions
+router.get('/issues', asyncHandler(remindersController.getReminderIssues));
+
 // GET all reminders
 router.get('/', asyncHandler(remindersController.getAllReminders));
 

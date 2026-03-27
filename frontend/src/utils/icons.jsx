@@ -99,3 +99,9 @@ export const TrashIcon = () => (
     <path d="M14 11v6" />
   </IconWrapper>
 );
+
+export const BackIcon = () => (
+  <IconWrapper>
+    <path d="M15 19l-7-7 7-7" />
+  </IconWrapper>
+);

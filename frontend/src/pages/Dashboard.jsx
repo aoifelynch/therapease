@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, Link } from 'react-router-dom';
 import { AppSidebar } from '../components/AppSidebar';
 import { appointmentsAPI, clientsAPI, paymentsAPI, remindersAPI, todosAPI } from '../api/api';
 import { useAuth } from '../context/AuthContext';
@@ -11,7 +12,9 @@ import {
 } from '../utils/icons';
 
 export function Dashboard() {
+  const location = useLocation();
   const { user } = useAuth();
+  const remindersSectionRef = useRef(null);
   const [activeNav, setActiveNav] = useState('Dashboard');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -21,6 +24,7 @@ export function Dashboard() {
   const [now, setNow] = useState(new Date());
   const [clients, setClients] = useState([]);
   const [appointments, setAppointments] = useState([]);
+  const [reminderIssues, setReminderIssues] = useState([]);
   const [payments, setPayments] = useState([]);
   const [reminders, setReminders] = useState([]);
   const [todos, setTodos] = useState([]);
@@ -39,9 +43,10 @@ export function Dashboard() {
       setError('');
 
       try {
-        const [clientsResponse, appointmentsResponse, paymentsResponse, remindersResponse, todosResponse] = await Promise.all([
+        const [clientsResponse, appointmentsResponse, issuesResponse, paymentsResponse, remindersResponse, todosResponse] = await Promise.all([
           clientsAPI.getAll(),
           appointmentsAPI.getAll(),
+          remindersAPI.getIssues(),
           paymentsAPI.getAll(),
           remindersAPI.getAll(),
           todosAPI.getAll(),
@@ -49,6 +54,7 @@ export function Dashboard() {
 
         setClients(clientsResponse.data || []);
         setAppointments(appointmentsResponse.data || []);
+        setReminderIssues(issuesResponse.data || []);
         setPayments(paymentsResponse.data || []);
         setReminders(remindersResponse.data || []);
         setTodos(todosResponse.data || []);
@@ -109,6 +115,32 @@ export function Dashboard() {
     return lookup;
   }, {});
 
+  const allReminders = useMemo(() => ([...reminderIssues, ...reminders]), [reminderIssues, reminders]);
+
+  const focusedClientId = location.state?.clientId || null;
+  const focusedReminderType = location.state?.reminderType || null;
+  const prioritizedReminders = useMemo(() => {
+    if (!focusedClientId && !focusedReminderType) return allReminders;
+
+    return [...allReminders].sort((first, second) => {
+      const firstMatch = (focusedClientId ? first.client === focusedClientId : true)
+        && (focusedReminderType ? first.type === focusedReminderType : true);
+      const secondMatch = (focusedClientId ? second.client === focusedClientId : true)
+        && (focusedReminderType ? second.type === focusedReminderType : true);
+
+      if (firstMatch === secondMatch) return 0;
+      return firstMatch ? -1 : 1;
+    });
+  }, [allReminders, focusedClientId, focusedReminderType]);
+
+  useEffect(() => {
+    const shouldFocusReminders = location.hash === '#reminders' || location.state?.focusReminders;
+
+    if (!shouldFocusReminders || loading) return;
+
+    remindersSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [loading, location.hash, location.state, prioritizedReminders.length]);
+
   // Stats cards data
   const statCards = [
     {
@@ -141,7 +173,7 @@ export function Dashboard() {
     },
   ];
 
-  // Event handlers - Todo CRUD
+  // Todo CRUD
   const handleCreateTodo = async (event) => {
     event.preventDefault();
     const trimmedTitle = todoTitle.trim();
@@ -279,31 +311,44 @@ export function Dashboard() {
             </div>
 
             {/* Reminders */}
-            <div className="rounded-3xl p-6" style={componentStyles.card}>
+            <div id="reminders" ref={remindersSectionRef} className="rounded-3xl p-6" style={componentStyles.card}>
               <div className="mb-4 flex items-center justify-between gap-3">
                 <h2 className="text-xl font-semibold" style={componentStyles.sectionTitle}>Reminders</h2>
                 <span className="text-xs font-medium uppercase tracking-[0.16em]" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.5) }}>
-                  {reminders.length} total
+                  {allReminders.length} total
                 </span>
               </div>
 
               <div className="space-y-3">
-                {(loading ? [] : reminders.slice(0, 4)).map((reminder) => {
+                {(loading ? [] : prioritizedReminders.slice(0, 6)).map((reminder) => {
                   const tone = componentStyles.getReminderTone(reminder.status);
                   const reminderClient = clientLookup[reminder.client] || 'Practice reminder';
+                  const isFocusedReminder = Boolean(
+                    (focusedClientId ? reminder.client === focusedClientId : true)
+                    && (focusedReminderType ? reminder.type === focusedReminderType : true)
+                    && (focusedClientId || focusedReminderType),
+                  );
 
                   return (
-                    <div key={reminder._id || reminder.id} className="flex items-start gap-3 rounded-2xl px-3 py-3" style={{ backgroundColor: tone.background }}>
+                    <Link
+                      to={`/clients/${reminder.client}`}
+                      key={reminder._id || reminder.id}
+                      className="flex items-start gap-3 rounded-2xl px-3 py-3 no-underline transition-opacity hover:opacity-80"
+                      style={{
+                        backgroundColor: tone.background,
+                        border: isFocusedReminder ? `1px solid ${withAlpha(theme.colors.primary.DEFAULT, 0.55)}` : '1px solid transparent',
+                      }}
+                    >
                       <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: tone.dot }} />
                       <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.82) }}>
                         <span className="font-semibold" style={{ color: theme.colors.secondary.charcoal }}>{reminderClient}</span>{' '}
                         {reminder.description}
                       </p>
-                    </div>
+                    </Link>
                   );
                 })}
 
-                {!loading && reminders.length === 0 && (
+                {!loading && allReminders.length === 0 && (
                   <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.58) }}>
                     No reminders yet.
                   </p>

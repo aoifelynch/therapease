@@ -11,6 +11,17 @@ export const getAllReminders = async (req, res) => {
   });
 };
 
+// GET computed issues
+export const getReminderIssues = async (req, res) => {
+  const issues = await remindersService.getReminderIssues(req.user._id);
+
+  res.status(200).json({
+    success: true,
+    data: issues,
+    message: 'Reminder issues retrieved successfully'
+  });
+};
+
 // CREATE
 export const createReminder = async (req, res) => {
   const reminder = await remindersService.createReminder(req.body, req.user._id);

@@ -159,8 +159,18 @@ export const clientsAPI = {
 
 // Notes API
 export const notesAPI = {
+  async getAll() {
+    const response = await api.get('/notes');
+    return response.data;
+  },
+
   async getById(noteId) {
     const response = await api.get(`/notes/${noteId}`);
+    return response.data;
+  },
+
+  async create(noteData) {
+    const response = await api.post('/notes', noteData);
     return response.data;
   },
 
@@ -177,6 +187,11 @@ export const notesAPI = {
 
 // Files API
 export const filesAPI = {
+  async getAll() {
+    const response = await api.get('/files');
+    return response.data;
+  },
+
   async upload(fileData) {
     const response = await api.post('/files', fileData);
     return response.data;
@@ -205,6 +220,11 @@ export const paymentsAPI = {
 export const remindersAPI = {
   async getAll() {
     const response = await api.get('/reminders');
+    return response.data;
+  },
+
+  async getIssues() {
+    const response = await api.get('/reminders/issues');
     return response.data;
   },
 

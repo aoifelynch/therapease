@@ -8,6 +8,9 @@ const router = Router();
 // All file routes require authentication
 router.use(authenticate);
 
+// GET all files
+router.get('/', asyncHandler(filesController.getFiles));
+
 // UPLOAD file
 router.post('/', asyncHandler(filesController.uploadFile));
 
