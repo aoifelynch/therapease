@@ -2,6 +2,27 @@ import mongoose from 'mongoose';
 
 const isObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
 
+const normalizeIrishPhoneNumber = (value) => {
+  if (typeof value !== 'string') return value;
+
+  const compact = value.trim().replace(/[\s()-]/g, '');
+  if (!compact) return compact;
+
+  if (/^08\d+$/u.test(compact)) {
+    return `+353${compact.slice(1)}`;
+  }
+
+  if (/^3538\d+$/u.test(compact)) {
+    return `+${compact}`;
+  }
+
+  if (/^003538\d+$/u.test(compact)) {
+    return `+${compact.slice(2)}`;
+  }
+
+  return compact;
+};
+
 // User validators (kept for auth routes)
 export const registerSchema = {
   email: {
@@ -77,6 +98,14 @@ export const loginSchema = {
   }
 };
 
+export const refreshTokenSchema = {
+  refreshToken: {
+    in: ['body'],
+    notEmpty: { errorMessage: "'refreshToken' field is required" },
+    isString: { errorMessage: "'refreshToken' must be a string" }
+  }
+};
+
 // Reusable ObjectId validator for any param name
 export const objectIdParam = (paramName = 'id') => ({
   [paramName]: {
@@ -106,13 +135,16 @@ export const clientSchema = {
   },
   email: {
     in: ['body'],
-    optional: true,
+    notEmpty: { errorMessage: "'email' field is required" },
     isEmail: { errorMessage: "'email' must be a valid email address" },
     normalizeEmail: true
   },
   phone: {
     in: ['body'],
-    optional: true,
+    notEmpty: { errorMessage: "'phone' field is required" },
+    customSanitizer: {
+      options: normalizeIrishPhoneNumber,
+    },
     isString: { errorMessage: "'phone' must be a string" },
     isLength: { options: { max: 30 }, errorMessage: "'phone' max length is 30 chars" },
     trim: true
@@ -139,6 +171,9 @@ export const clientSchema = {
   'emergencyContact.phone': {
     in: ['body'],
     optional: true,
+    customSanitizer: {
+      options: normalizeIrishPhoneNumber,
+    },
     isString: { errorMessage: "'emergencyContact.phone' must be a string" },
     isLength: { options: { max: 30 }, errorMessage: "'emergencyContact.phone' max length is 30 chars" },
     trim: true

@@ -16,6 +16,11 @@ export const AppSidebar = ({ activeNav, onNavSelect, user }) => {
       return;
     }
 
+    if (label === 'Payments') {
+      navigate('/payments');
+      return;
+    }
+
     if (label === 'Calendar') {
       navigate('/calendar');
       return;

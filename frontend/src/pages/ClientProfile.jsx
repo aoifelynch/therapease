@@ -35,9 +35,109 @@ export function ClientProfile() {
   const [showAllFiles, setShowAllFiles] = useState(false);
   const [viewingNote, setViewingNote] = useState(null);
   const [historySortOrder, setHistorySortOrder] = useState('newest');
+  const [showEditClientModal, setShowEditClientModal] = useState(false);
+  const [editClientBusy, setEditClientBusy] = useState(false);
+  const [editClientMessage, setEditClientMessage] = useState('');
+  const [showDeleteClientModal, setShowDeleteClientModal] = useState(false);
+  const [deleteClientBusy, setDeleteClientBusy] = useState(false);
+  const [deleteClientMessage, setDeleteClientMessage] = useState('');
+  const [editClientForm, setEditClientForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    address: '',
+    emergencyContactName: '',
+    emergencyContactPhone: '',
+  });
   const fileInputRef = useRef(null);
   const autosaveTimeoutRef = useRef(null);
   const lastSavedPayloadRef = useRef('');
+
+  const openEditClientModal = () => {
+    if (!client) return;
+
+    setEditClientForm({
+      firstName: client.firstName || '',
+      lastName: client.lastName || '',
+      email: client.email || '',
+      phone: client.phone || '',
+      address: client.address || '',
+      emergencyContactName: client.emergencyContact?.name || '',
+      emergencyContactPhone: client.emergencyContact?.phone || '',
+    });
+    setEditClientMessage('');
+    setShowEditClientModal(true);
+  };
+
+  const closeEditClientModal = () => {
+    if (editClientBusy) return;
+    setShowEditClientModal(false);
+    setEditClientMessage('');
+  };
+
+  const closeDeleteClientModal = () => {
+    if (deleteClientBusy) return;
+    setShowDeleteClientModal(false);
+    setDeleteClientMessage('');
+  };
+
+  const handleSaveClientDetails = async (event) => {
+    event.preventDefault();
+    setEditClientMessage('');
+
+    const normalizedFirstName = editClientForm.firstName.trim().replace(/\s+/g, ' ');
+    const normalizedLastName = editClientForm.lastName.trim().replace(/\s+/g, ' ');
+    const normalizedEmail = editClientForm.email.trim().toLowerCase();
+    const normalizedPhone = editClientForm.phone.trim();
+    const normalizedAddress = editClientForm.address.trim();
+    const normalizedEmergencyContactName = editClientForm.emergencyContactName.trim();
+    const normalizedEmergencyContactPhone = editClientForm.emergencyContactPhone.trim();
+
+    if (!normalizedFirstName || !normalizedLastName || !normalizedEmail || !normalizedPhone) {
+      setEditClientMessage('First name, last name, email, and phone are required.');
+      return;
+    }
+
+    setEditClientBusy(true);
+
+    try {
+      const response = await clientsAPI.update(clientId, {
+        firstName: normalizedFirstName,
+        lastName: normalizedLastName,
+        email: normalizedEmail,
+        phone: normalizedPhone,
+        address: normalizedAddress || undefined,
+        emergencyContact: (normalizedEmergencyContactName || normalizedEmergencyContactPhone)
+          ? {
+            name: normalizedEmergencyContactName || undefined,
+            phone: normalizedEmergencyContactPhone || undefined,
+          }
+          : undefined,
+      });
+
+      setClient(response.data);
+      setShowEditClientModal(false);
+    } catch (requestError) {
+      setEditClientMessage(requestError.response?.data?.message || requestError.message || 'Unable to update client');
+    } finally {
+      setEditClientBusy(false);
+    }
+  };
+
+  const handleDeleteClient = async () => {
+    setDeleteClientMessage('');
+    setDeleteClientBusy(true);
+
+    try {
+      await clientsAPI.delete(clientId);
+      navigate('/clients');
+    } catch (requestError) {
+      setDeleteClientMessage(requestError.response?.data?.message || requestError.message || 'Unable to delete client');
+    } finally {
+      setDeleteClientBusy(false);
+    }
+  };
 
   const resetNoteEditor = useCallback((message = '') => {
     setEditingNoteId(null);
@@ -546,6 +646,7 @@ export function ClientProfile() {
                 <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <button
                     type="button"
+                    onClick={openEditClientModal}
                     className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-colors"
                     style={{ backgroundColor: theme.colors.primary.DEFAULT, color: theme.colors.gray[50] }}
                   >
@@ -554,6 +655,10 @@ export function ClientProfile() {
                   </button>
                   <button
                     type="button"
+                    onClick={() => {
+                      setDeleteClientMessage('');
+                      setShowDeleteClientModal(true);
+                    }}
                     className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-colors"
                     style={{ backgroundColor: theme.colors.error.bg, color: theme.colors.error.text }}
                   >
@@ -600,11 +705,18 @@ export function ClientProfile() {
                     {new Intl.DateTimeFormat('en-IE', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date(nextAppointment.date))}
                   </p>
                   <p className="font-medium">
-                    {nextAppointment.startTime}
+                    {nextAppointment.startTime} - {nextAppointment.endTime}
                   </p>
                   <p className="text-sm">{nextAppointment.type === 'online' ? 'Online' : 'In-person'}</p>
                   <button
                     type="button"
+                    onClick={() => {
+                      const rawDate = String(nextAppointment.date || '');
+                      const appointmentDate = rawDate.includes('T') ? rawDate.slice(0, 10) : rawDate;
+                      const dateParam = encodeURIComponent(appointmentDate);
+
+                      navigate(`/calendar?view=timeGridWeek&date=${dateParam}`);
+                    }}
                     className="mt-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
                     style={{ backgroundColor: withAlpha(theme.colors.primary.DEFAULT, 0.16), color: theme.colors.primary.darker }}
                   >
@@ -1061,6 +1173,207 @@ export function ClientProfile() {
           </div>
         </div>
       </main>
+
+      {showEditClientModal && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-3xl p-6" style={componentStyles.card}>
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <h3 className="text-xl font-semibold" style={componentStyles.sectionTitle}>Edit Client</h3>
+              <button
+                type="button"
+                onClick={closeEditClientModal}
+                disabled={editClientBusy}
+                className="rounded-xl px-3 py-1.5 text-sm font-semibold"
+                style={{ backgroundColor: withAlpha(theme.colors.secondary.beige, 0.7), color: theme.colors.secondary.charcoal }}
+              >
+                Close
+              </button>
+            </div>
+
+            <form className="space-y-4" onSubmit={handleSaveClientDetails}>
+              <div>
+                <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+                  First Name <span style={{ color: theme.colors.error.text }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editClientForm.firstName}
+                  onChange={(event) => setEditClientForm((current) => ({ ...current, firstName: event.target.value }))}
+                  required
+                  className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+                  style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+                  Last Name <span style={{ color: theme.colors.error.text }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editClientForm.lastName}
+                  onChange={(event) => setEditClientForm((current) => ({ ...current, lastName: event.target.value }))}
+                  required
+                  className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+                  style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+                  Email <span style={{ color: theme.colors.error.text }}>*</span>
+                </label>
+                <input
+                  type="email"
+                  value={editClientForm.email}
+                  onChange={(event) => setEditClientForm((current) => ({ ...current, email: event.target.value }))}
+                  required
+                  className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+                  style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+                  Phone <span style={{ color: theme.colors.error.text }}>*</span>
+                </label>
+                <input
+                  type="tel"
+                  value={editClientForm.phone}
+                  onChange={(event) => setEditClientForm((current) => ({ ...current, phone: event.target.value }))}
+                  required
+                  className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+                  style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+                  Address <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={editClientForm.address}
+                  onChange={(event) => setEditClientForm((current) => ({ ...current, address: event.target.value }))}
+                  className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+                  style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
+                />
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+                    Emergency Contact Name <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editClientForm.emergencyContactName}
+                    onChange={(event) => setEditClientForm((current) => ({ ...current, emergencyContactName: event.target.value }))}
+                    className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+                    style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+                    Emergency Contact Phone <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={editClientForm.emergencyContactPhone}
+                    onChange={(event) => setEditClientForm((current) => ({ ...current, emergencyContactPhone: event.target.value }))}
+                    className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+                    style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
+                  />
+                </div>
+              </div>
+
+              {editClientMessage && (
+                <div
+                  className="rounded-xl px-3 py-2 text-sm"
+                  style={{
+                    backgroundColor: withAlpha(theme.colors.error.bg, 0.9),
+                    border: `1px solid ${theme.colors.error.border}`,
+                    color: theme.colors.error.text,
+                  }}
+                >
+                  {editClientMessage}
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={closeEditClientModal}
+                  disabled={editClientBusy}
+                  className="rounded-xl px-4 py-2 text-sm font-medium"
+                  style={{ backgroundColor: withAlpha(theme.colors.secondary.beige, 0.7), color: theme.colors.secondary.charcoal }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editClientBusy}
+                  className="rounded-xl px-4 py-2 text-sm font-semibold"
+                  style={{
+                    backgroundColor: editClientBusy ? theme.colors.primary.light : theme.colors.primary.DEFAULT,
+                    color: theme.colors.gray[50],
+                  }}
+                >
+                  {editClientBusy ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showDeleteClientModal && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-3xl p-6" style={componentStyles.card}>
+            <h3 className="text-xl font-semibold" style={componentStyles.sectionTitle}>Delete Client</h3>
+            <p className="mt-3 text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.76) }}>
+              This action cannot be undone. Are you sure you want to delete {clientName}?
+            </p>
+
+            {deleteClientMessage && (
+              <div
+                className="mt-4 rounded-xl px-3 py-2 text-sm"
+                style={{
+                  backgroundColor: withAlpha(theme.colors.error.bg, 0.9),
+                  border: `1px solid ${theme.colors.error.border}`,
+                  color: theme.colors.error.text,
+                }}
+              >
+                {deleteClientMessage}
+              </div>
+            )}
+
+            <div className="mt-6 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeDeleteClientModal}
+                disabled={deleteClientBusy}
+                className="rounded-xl px-4 py-2 text-sm font-medium"
+                style={{ backgroundColor: withAlpha(theme.colors.secondary.beige, 0.7), color: theme.colors.secondary.charcoal }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteClient}
+                disabled={deleteClientBusy}
+                className="rounded-xl px-4 py-2 text-sm font-semibold"
+                style={{
+                  backgroundColor: deleteClientBusy ? withAlpha(theme.colors.error.text, 0.6) : theme.colors.error.text,
+                  color: theme.colors.gray[50],
+                }}
+              >
+                {deleteClientBusy ? 'Deleting...' : 'Delete Client'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

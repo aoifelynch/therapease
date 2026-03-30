@@ -13,7 +13,7 @@ export default {
   // Compute action-needed reminder issues from core data
   async getReminderIssues(userId) {
     const clients = await Client.find({ user: userId })
-      .select('firstName lastName email phone')
+      .select('firstName lastName email phone address emergencyContact')
       .lean()
       .exec();
 
@@ -66,6 +66,10 @@ export default {
     clients.forEach((client) => {
       const clientId = String(client._id);
       const hasContactDetails = Boolean(client.email || client.phone);
+      const hasAddress = Boolean(String(client.address || '').trim());
+      const hasEmergencyContactName = Boolean(String(client.emergencyContact?.name || '').trim());
+      const hasEmergencyContactPhone = Boolean(String(client.emergencyContact?.phone || '').trim());
+      const hasEmergencyContact = hasEmergencyContactName && hasEmergencyContactPhone;
 
       if (!hasContactDetails) {
         issues.push({
@@ -74,6 +78,26 @@ export default {
           type: 'missing-contact',
           status: 'pending',
           description: 'is missing contact details (email or phone).',
+        });
+      }
+
+      if (!hasEmergencyContact) {
+        issues.push({
+          id: `emergency-contact-${clientId}`,
+          client: clientId,
+          type: 'missing-emergency-contact',
+          status: 'pending',
+          description: 'is missing emergency contact details.',
+        });
+      }
+
+      if (!hasAddress) {
+        issues.push({
+          id: `address-${clientId}`,
+          client: clientId,
+          type: 'missing-address',
+          status: 'pending',
+          description: 'is missing an address in their profile.',
         });
       }
 

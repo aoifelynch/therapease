@@ -5,8 +5,27 @@ const client = twilio(
   process.env.TWILIO_AUTH_TOKEN
 );
 
+const normalizePhoneNumber = (value) => {
+  const compact = String(value || '').trim().replace(/[\s()-]/g, '');
+  if (!compact) return compact;
+
+  if (/^08\d+$/u.test(compact)) {
+    return `+353${compact.slice(1)}`;
+  }
+
+  if (/^3538\d+$/u.test(compact)) {
+    return `+${compact}`;
+  }
+
+  if (/^003538\d+$/u.test(compact)) {
+    return `+${compact.slice(2)}`;
+  }
+
+  return compact;
+};
+
 export const sendSMS = async ({ to, message }) => {
-  const formattedNumber = to.replace(/\s+/g, '');
+  const formattedNumber = normalizePhoneNumber(to);
   
   return client.messages.create({
     body: message,

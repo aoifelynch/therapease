@@ -1,6 +1,6 @@
 import User from '../models/User.js';
 import { HttpError, BAD_REQUEST, UNAUTHORIZED } from '../utils/HttpError.js';
-import { generateAccessToken, generateRefreshToken } from '../utils/jwt.js';
+import { generateAccessToken, generateRefreshToken, verifyToken } from '../utils/jwt.js';
 
 const safeUser = (user) => (user ? user.toJSON() : user);
 
@@ -79,6 +79,32 @@ export default {
       user: safeUser(user),
       ...tokens,
       requires2FA: false,
+    };
+  },
+
+  // Refresh access token using a valid refresh token
+  async refreshToken(refreshToken) {
+    if (!refreshToken) {
+      throw new HttpError(BAD_REQUEST, 'Refresh token is required');
+    }
+
+    let decoded;
+    try {
+      decoded = verifyToken(refreshToken);
+    } catch {
+      throw new HttpError(UNAUTHORIZED, 'Invalid or expired refresh token');
+    }
+
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      throw new HttpError(UNAUTHORIZED, 'User not found');
+    }
+
+    const tokens = await generateTokens(user);
+
+    return {
+      user: safeUser(user),
+      ...tokens,
     };
   },
 

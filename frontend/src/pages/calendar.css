@@ -75,6 +75,18 @@
   border-left: 2px solid #ef7f1a;
 }
 
+.therapease-calendar-wrapper .fc .therapease-event-cancelled {
+  background-color: rgba(156, 163, 175, 0.25);
+  border-left-color: #9ca3af;
+  opacity: 0.72;
+}
+
+.therapease-calendar-wrapper .fc .therapease-event-cancelled .therapease-event-time,
+.therapease-calendar-wrapper .fc .therapease-event-cancelled .therapease-event-client,
+.therapease-calendar-wrapper .fc .therapease-event-cancelled .therapease-event-type {
+  color: rgba(55, 65, 81, 0.8);
+}
+
 .therapease-calendar-wrapper .fc .fc-event-main {
   color: inherit;
 }

@@ -3,6 +3,7 @@ import Client from '../models/Client.js';
 import { HttpError, NOT_FOUND, FORBIDDEN, BAD_REQUEST, INTERNAL_SERVER_ERROR } from '../utils/HttpError.js';
 import emailQueue from '../queues/emailQueue.js';
 import { appointmentEmail } from '../utils/emailTemplates/appointmentEmail.js';
+import { appointmentModifiedEmail } from '../utils/emailTemplates/appointmentModifiedEmail.js';
 import { createZoomMeeting } from "../services/zoomService.js";
 import { deleteZoomMeeting } from "./zoomService.js";
 import { reminderQueue } from "../queues/reminderQueue.js";
@@ -232,32 +233,18 @@ export default {
   // Update an appointment
   async updateAppointment(appointmentId, updateData, userId) {
 
-    const appointment = await Appointment.findById(appointmentId).exec();
+    const appointment = await Appointment.findById(appointmentId).populate('client').exec();
     if (!appointment) throw new HttpError(NOT_FOUND, 'Appointment not found');
 
     if (appointment.user.toString() !== userId.toString()) {
       throw new HttpError(FORBIDDEN, 'Forbidden');
     }
 
-    if (updateData.status === 'cancelled') {
-
-      // Delete Zoom meeting if it's an online appointment
-      if (appointment.type === 'online' && appointment.zoomMeetingId) {
-        await deleteZoomMeeting(appointment.zoomMeetingId);
-      }
-
-      // Remove SMS reminder job from BullMQ queue
-      if (appointment.reminderJobId) {
-        const job = await reminderQueue.getJob(appointment.reminderJobId);
-
-        if (job) {
-          await job.remove();
-        }
-      }
-
-    }
-
     let updatedFields = { ...updateData };
+    const previousStatus = appointment.status;
+    const previousType = appointment.type;
+    const previousZoomMeetingId = appointment.zoomMeetingId;
+    let clientForNotification = appointment.client;
 
     // Only validate client if clientId is provided
     if (updateData.clientId) {
@@ -270,6 +257,7 @@ export default {
       }
 
       updatedFields.client = client._id;
+      clientForNotification = client;
       delete updatedFields.clientId;
     }
 
@@ -277,6 +265,8 @@ export default {
     const nextStartTime = updatedFields.startTime || appointment.startTime;
     const nextEndTime = updatedFields.endTime || appointment.endTime;
     const nextStatus = updatedFields.status || appointment.status;
+    const nextType = updatedFields.type || appointment.type;
+    const nextClient = clientForNotification || appointment.client;
 
     if (nextStatus !== 'cancelled') {
       await ensureNoOverlappingAppointment({
@@ -288,11 +278,66 @@ export default {
       });
     }
 
+    if (nextStatus === 'cancelled' || nextType !== 'online') {
+
+      // Delete Zoom meeting when appointment is cancelled or switched to in-person.
+      if (appointment.type === 'online' && previousZoomMeetingId) {
+        await deleteZoomMeeting(previousZoomMeetingId);
+      }
+
+      // Remove SMS reminder job from BullMQ queue.
+      if (appointment.reminderJobId) {
+        const job = await reminderQueue.getJob(appointment.reminderJobId);
+
+        if (job) {
+          await job.remove();
+        }
+      }
+
+      updatedFields.zoomLink = null;
+      updatedFields.zoomMeetingId = null;
+    }
+
+    const needsNewOnlineMeeting = nextStatus !== 'cancelled'
+      && nextType === 'online'
+      && (appointment.type !== 'online' || !appointment.zoomMeetingId || appointment.status === 'cancelled');
+
+    if (needsNewOnlineMeeting) {
+      const zoomMeeting = await createZoomMeeting({
+        date: nextDate,
+        startTime: nextStartTime,
+        endTime: nextEndTime,
+        topic: `TherapEase Session - ${nextClient?.firstName || ''} ${nextClient?.lastName || ''}`.trim(),
+      });
+
+      updatedFields.zoomLink = zoomMeeting.joinUrl;
+      updatedFields.zoomMeetingId = zoomMeeting.id;
+    }
+
     const updatedAppointment = await Appointment.findByIdAndUpdate(
       appointmentId,
       updatedFields,
       { new: true, runValidators: true }
-    ).exec();
+    ).populate('client').exec();
+
+    const statusChanged = previousStatus !== updatedAppointment.status;
+    const typeChanged = previousType !== updatedAppointment.type;
+    const shouldSendModifiedEmail = (statusChanged && updatedAppointment.status === 'cancelled') || typeChanged;
+
+    if (shouldSendModifiedEmail && updatedAppointment.client?.email) {
+      const html = appointmentModifiedEmail({
+        client: updatedAppointment.client,
+        appointment: updatedAppointment,
+        previousType,
+        previousStatus,
+      });
+
+      await emailQueue.add('appointmentModified', {
+        to: updatedAppointment.client.email,
+        subject: 'Appointment Updated - TherapEase',
+        html,
+      });
+    }
 
     return updatedAppointment;
   },

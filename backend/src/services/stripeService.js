@@ -10,6 +10,8 @@ export const createCheckoutSession = async ({
   therapistId
 }) => {
 
+  const unitAmount = Math.round(Number(amount) * 100);
+
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ["card"],
 
@@ -24,7 +26,7 @@ export const createCheckoutSession = async ({
           product_data: {
             name: "Therapy Session"
           },
-          unit_amount: amount * 100
+          unit_amount: unitAmount
         },
         quantity: 1
       }

@@ -5,6 +5,7 @@ import { validate } from '../middleware/validateRequest.js';
 import {
   registerSchema,
   loginSchema,
+  refreshTokenSchema,
   updateProfileSchema,
   deleteAccountSchema
 } from '../utils/validators.js';
@@ -15,6 +16,7 @@ const router = Router();
 // Public routes
 router.post('/register', validate(registerSchema), asyncHandler(authController.register));
 router.post('/login', validate(loginSchema), asyncHandler(authController.login));
+router.post('/refresh', validate(refreshTokenSchema), asyncHandler(authController.refreshToken));
 router.post('/logout', asyncHandler(authController.logout));
 
 // Protected routes

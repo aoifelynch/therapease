@@ -1,5 +1,53 @@
 import axios from 'axios';
 
+const clearAuthStorage = () => {
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('user');
+};
+
+const redirectToLogin = () => {
+  if (window.location.pathname !== '/login') {
+    window.location.href = '/login';
+  }
+};
+
+let refreshPromise = null;
+
+const refreshAccessToken = async () => {
+  const storedRefreshToken = localStorage.getItem('refreshToken');
+  if (!storedRefreshToken) {
+    throw new Error('No refresh token available');
+  }
+
+  const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+  const response = await axios.post(
+    `${baseURL}/auth/refresh`,
+    { refreshToken: storedRefreshToken },
+    {
+      timeout: 10000,
+      headers: { 'Content-Type': 'application/json' },
+    },
+  );
+
+  const nextAccessToken = response.data?.accessToken;
+  const nextRefreshToken = response.data?.refreshToken;
+  const nextUser = response.data?.user;
+
+  if (!nextAccessToken || !nextRefreshToken) {
+    throw new Error('Refresh response missing tokens');
+  }
+
+  localStorage.setItem('accessToken', nextAccessToken);
+  localStorage.setItem('refreshToken', nextRefreshToken);
+
+  if (nextUser) {
+    localStorage.setItem('user', JSON.stringify(nextUser));
+  }
+
+  return nextAccessToken;
+};
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001/api',
   timeout: 10000,
@@ -23,14 +71,44 @@ api.interceptors.request.use(
 // Response interceptor to handle errors globally
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Redirect to login on unauthorized
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+  async (error) => {
+    const originalRequest = error.config;
+    const status = error.response?.status;
+    const requestUrl = originalRequest?.url || '';
+    const isAuthRoute = requestUrl.includes('/auth/login')
+      || requestUrl.includes('/auth/register')
+      || requestUrl.includes('/auth/refresh')
+      || requestUrl.includes('/auth/logout');
+
+    if (status === 401 && originalRequest && !originalRequest._retry && !isAuthRoute) {
+      originalRequest._retry = true;
+
+      try {
+        if (!refreshPromise) {
+          refreshPromise = refreshAccessToken();
+        }
+
+        const nextAccessToken = await refreshPromise;
+        originalRequest.headers = {
+          ...(originalRequest.headers || {}),
+          Authorization: `Bearer ${nextAccessToken}`,
+        };
+
+        return api(originalRequest);
+      } catch (refreshError) {
+        clearAuthStorage();
+        redirectToLogin();
+        return Promise.reject(refreshError);
+      } finally {
+        refreshPromise = null;
+      }
     }
+
+    if (status === 401) {
+      clearAuthStorage();
+      redirectToLogin();
+    }
+
     return Promise.reject(error);
   }
 );
@@ -49,6 +127,11 @@ export const authAPI = {
 
   async logout() {
     const response = await api.post('/auth/logout');
+    return response.data;
+  },
+
+  async refreshToken(refreshToken) {
+    const response = await api.post('/auth/refresh', { refreshToken });
     return response.data;
   },
 

@@ -37,6 +37,19 @@ export const login = async (req, res) => {
   });
 };
 
+// Refresh access token endpoint
+export const refreshToken = async (req, res) => {
+  const { refreshToken } = req.body;
+  const result = await authService.refreshToken(refreshToken);
+
+  res.status(200).json({
+    message: 'Token refreshed successfully',
+    accessToken: result.accessToken,
+    refreshToken: result.refreshToken,
+    user: result.user,
+  });
+};
+
 // Logout endpoint
 export const logout = async (req, res) => {
   res.status(200).json({ message: "Logout successful" });
