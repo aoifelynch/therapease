@@ -61,6 +61,7 @@ export function ClientList() {
 		lastName: '',
 		email: '',
 		phone: '',
+		dateOfBirth: '',
 		address: '',
 		emergencyContactName: '',
 		emergencyContactPhone: '',
@@ -70,6 +71,7 @@ export function ClientList() {
 		lastName: '',
 		email: '',
 		phone: '',
+		dateOfBirth: '',
 		address: '',
 		emergencyContactName: '',
 		emergencyContactPhone: '',
@@ -87,6 +89,7 @@ export function ClientList() {
 			lastName: '',
 			email: '',
 			phone: '',
+			dateOfBirth: '',
 			address: '',
 			emergencyContactName: '',
 			emergencyContactPhone: '',
@@ -106,6 +109,7 @@ export function ClientList() {
 			lastName: '',
 			email: '',
 			phone: '',
+			dateOfBirth: '',
 			address: '',
 			emergencyContactName: '',
 			emergencyContactPhone: '',
@@ -120,6 +124,7 @@ export function ClientList() {
 			lastName: client.lastName || '',
 			email: client.email || '',
 			phone: client.phone || '',
+			dateOfBirth: client.dateOfBirth ? client.dateOfBirth.split('T')[0] : '',
 			address: client.address || '',
 			emergencyContactName: client.emergencyContact?.name || '',
 			emergencyContactPhone: client.emergencyContact?.phone || '',
@@ -150,6 +155,7 @@ export function ClientList() {
 		const normalizedLastName = createForm.lastName.trim().replace(/\s+/g, ' ');
 		const normalizedEmail = createForm.email.trim().toLowerCase();
 		const normalizedPhone = createForm.phone.trim();
+		const normalizedDateOfBirth = createForm.dateOfBirth.trim();
 		const normalizedAddress = createForm.address.trim();
 		const normalizedEmergencyContactName = createForm.emergencyContactName.trim();
 		const normalizedEmergencyContactPhone = createForm.emergencyContactPhone.trim();
@@ -167,6 +173,7 @@ export function ClientList() {
 				lastName: normalizedLastName,
 				email: normalizedEmail,
 				phone: normalizedPhone,
+				dateOfBirth: normalizedDateOfBirth || undefined,
 				address: normalizedAddress || undefined,
 				emergencyContact: (normalizedEmergencyContactName || normalizedEmergencyContactPhone)
 					? {
@@ -203,6 +210,7 @@ export function ClientList() {
 		const normalizedLastName = editForm.lastName.trim().replace(/\s+/g, ' ');
 		const normalizedEmail = editForm.email.trim().toLowerCase();
 		const normalizedPhone = editForm.phone.trim();
+		const normalizedDateOfBirth = editForm.dateOfBirth.trim();
 		const normalizedAddress = editForm.address.trim();
 		const normalizedEmergencyContactName = editForm.emergencyContactName.trim();
 		const normalizedEmergencyContactPhone = editForm.emergencyContactPhone.trim();
@@ -220,6 +228,7 @@ export function ClientList() {
 				lastName: normalizedLastName,
 				email: normalizedEmail,
 				phone: normalizedPhone,
+				dateOfBirth: normalizedDateOfBirth || undefined,
 				address: normalizedAddress || undefined,
 				emergencyContact: (normalizedEmergencyContactName || normalizedEmergencyContactPhone)
 					? {
@@ -772,46 +781,59 @@ export function ClientList() {
 
 							<div>
 								<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-									Address <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
+								Date of Birth <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
+							</label>
+							<input
+								type="date"
+								value={createForm.dateOfBirth}
+								onChange={(event) => setCreateForm((current) => ({ ...current, dateOfBirth: event.target.value }))}
+								className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+								style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
+							/>
+						</div>
+
+						<div>
+							<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+								Address <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
+							</label>
+							<input
+								type="text"
+								value={createForm.address}
+								onChange={(event) => setCreateForm((current) => ({ ...current, address: event.target.value }))}
+								placeholder="Home address"
+								className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+								style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
+							/>
+						</div>
+
+						<div className="grid gap-3 md:grid-cols-2">
+							<div>
+								<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+									Emergency Contact Name <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
 								</label>
 								<input
 									type="text"
-									value={createForm.address}
-									onChange={(event) => setCreateForm((current) => ({ ...current, address: event.target.value }))}
-									placeholder="Home address"
+									value={createForm.emergencyContactName}
+									onChange={(event) => setCreateForm((current) => ({ ...current, emergencyContactName: event.target.value }))}
+									placeholder="Emergency contact"
 									className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
 									style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
 								/>
 							</div>
-
-							<div className="grid gap-3 md:grid-cols-2">
-								<div>
-									<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-										Emergency Contact Name <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
-									</label>
-									<input
-										type="text"
-										value={createForm.emergencyContactName}
-										onChange={(event) => setCreateForm((current) => ({ ...current, emergencyContactName: event.target.value }))}
-										placeholder="Emergency contact"
-										className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-										style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-									/>
-								</div>
-								<div>
-									<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-										Emergency Contact Phone <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
-									</label>
-									<input
-										type="tel"
-										value={createForm.emergencyContactPhone}
-										onChange={(event) => setCreateForm((current) => ({ ...current, emergencyContactPhone: event.target.value }))}
-										placeholder="+353..."
-										className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-										style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-									/>
-								</div>
+							<div>
+								<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+									Emergency Contact Phone <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
+								</label>
+								<input
+									type="tel"
+									value={createForm.emergencyContactPhone}
+									onChange={(event) => setCreateForm((current) => ({ ...current, emergencyContactPhone: event.target.value }))}
+									placeholder="+353..."
+									className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+									style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
+								/>
 							</div>
+						</div>
 
 							{createMessage && (
 								<div
@@ -939,24 +961,37 @@ export function ClientList() {
 
 							<div>
 								<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-									Address <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
+								Date of Birth <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
+							</label>
+							<input
+								type="date"
+								value={editForm.dateOfBirth}
+								onChange={(event) => setEditForm((current) => ({ ...current, dateOfBirth: event.target.value }))}
+								className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+								style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
+							/>
+						</div>
+
+						<div>
+							<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+								Address <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
+							</label>
+							<input
+								type="text"
+								value={editForm.address}
+								onChange={(event) => setEditForm((current) => ({ ...current, address: event.target.value }))}
+								className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+								style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
+							/>
+						</div>
+
+						<div className="grid gap-3 md:grid-cols-2">
+							<div>
+								<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+									Emergency Contact Name <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
 								</label>
 								<input
 									type="text"
-									value={editForm.address}
-									onChange={(event) => setEditForm((current) => ({ ...current, address: event.target.value }))}
-									className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-									style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-								/>
-							</div>
-
-							<div className="grid gap-3 md:grid-cols-2">
-								<div>
-									<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-										Emergency Contact Name <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
-									</label>
-									<input
-										type="text"
 										value={editForm.emergencyContactName}
 										onChange={(event) => setEditForm((current) => ({ ...current, emergencyContactName: event.target.value }))}
 										className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"

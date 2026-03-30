@@ -7,6 +7,8 @@ import { appointmentModifiedEmail } from '../utils/emailTemplates/appointmentMod
 import { createZoomMeeting } from "../services/zoomService.js";
 import { deleteZoomMeeting } from "./zoomService.js";
 import { reminderQueue } from "../queues/reminderQueue.js";
+import { createPaymentLinkForAppointment } from './paymentsService.js';
+import { sendSMS } from './smsService.js';
 
 const parseDate = (value) => {
   const date = new Date(value);
@@ -57,6 +59,71 @@ const getAppointmentInterval = (dateValue, startTimeValue, endTimeValue) => {
 };
 
 const hasOverlap = (startA, endA, startB, endB) => startA < endB && endA > startB;
+
+const PAYMENT_LINK_TIMINGS = new Set(['none', 'before', 'after']);
+
+const toBoolean = (value) => value === true || value === 'true' || value === 1 || value === '1';
+
+const normalizeAppointmentPaymentConfig = (input = {}, existing = {}) => {
+  const requestedTiming = input.paymentLinkTiming ?? existing.paymentLinkTiming ?? 'none';
+  const paymentLinkTiming = String(requestedTiming);
+
+  if (!PAYMENT_LINK_TIMINGS.has(paymentLinkTiming)) {
+    throw new HttpError(BAD_REQUEST, "'paymentLinkTiming' must be 'none', 'before', or 'after'");
+  }
+
+  if (paymentLinkTiming === 'none') {
+    return {
+      paymentLinkTiming,
+      autoSendPaymentLink: false,
+      quotedAmount: null,
+    };
+  }
+
+  const quotedSource = input.quotedAmount ?? existing.quotedAmount;
+  const normalizedQuotedAmount = Number(quotedSource);
+
+  if (!Number.isFinite(normalizedQuotedAmount) || normalizedQuotedAmount <= 0) {
+    throw new HttpError(BAD_REQUEST, 'quotedAmount must be greater than 0 when paymentLinkTiming is before or after');
+  }
+
+  const autoSendSource = input.autoSendPaymentLink ?? existing.autoSendPaymentLink ?? false;
+
+  return {
+    paymentLinkTiming,
+    autoSendPaymentLink: toBoolean(autoSendSource),
+    quotedAmount: Number(normalizedQuotedAmount.toFixed(2)),
+  };
+};
+
+const sendAfterSessionPaymentLinkIfNeeded = async (appointment) => {
+  if (!appointment) return;
+  if (appointment.status !== 'completed') return;
+  if (appointment.paymentLinkTiming !== 'after') return;
+
+  try {
+    const paymentLink = await createPaymentLinkForAppointment({
+      therapistId: appointment.user,
+      appointmentId: appointment._id,
+      clientId: appointment.client?._id || appointment.client,
+      amount: appointment.quotedAmount,
+      clientEmail: appointment.client?.email,
+      skipIfExisting: true,
+    });
+
+    if (paymentLink?.url && appointment.client?.phone) {
+      const clientName = appointment.client?.firstName || 'there';
+      const message = `Hi ${clientName}, your session has been marked completed. You can pay using this secure link: ${paymentLink.url}`;
+
+      await sendSMS({
+        to: appointment.client.phone,
+        message,
+      });
+    }
+  } catch (paymentError) {
+    console.error('Unable to send after-session payment link:', paymentError);
+  }
+};
 
 const ensureNoOverlappingAppointment = async ({
   userId,
@@ -147,6 +214,7 @@ export default {
       if (appointment.status === 'upcoming' && hasAppointmentPassed(appointment)) {
         appointment.status = 'completed';
         await appointment.save();
+        await sendAfterSessionPaymentLinkIfNeeded(appointment);
       }
       return appointment;
     });
@@ -172,6 +240,7 @@ export default {
     if (appointment.status === 'upcoming' && hasAppointmentPassed(appointment)) {
       appointment.status = 'completed';
       await appointment.save();
+      await sendAfterSessionPaymentLinkIfNeeded(appointment);
     }
 
     return appointment;
@@ -193,6 +262,7 @@ export default {
     }
 
     const appointmentPayload = { ...rest };
+    Object.assign(appointmentPayload, normalizeAppointmentPaymentConfig(appointmentPayload));
 
     await ensureNoOverlappingAppointment({
       userId,
@@ -260,6 +330,15 @@ export default {
       clientForNotification = client;
       delete updatedFields.clientId;
     }
+
+    Object.assign(
+      updatedFields,
+      normalizeAppointmentPaymentConfig(updatedFields, {
+        paymentLinkTiming: appointment.paymentLinkTiming,
+        autoSendPaymentLink: appointment.autoSendPaymentLink,
+        quotedAmount: appointment.quotedAmount,
+      }),
+    );
 
     const nextDate = updatedFields.date || appointment.date;
     const nextStartTime = updatedFields.startTime || appointment.startTime;
@@ -337,6 +416,14 @@ export default {
         subject: 'Appointment Updated - TherapEase',
         html,
       });
+    }
+
+    const shouldSendAfterSessionPaymentLink = statusChanged
+      && updatedAppointment.status === 'completed'
+      && updatedAppointment.paymentLinkTiming === 'after';
+
+    if (shouldSendAfterSessionPaymentLink) {
+      await sendAfterSessionPaymentLinkIfNeeded(updatedAppointment);
     }
 
     return updatedAppointment;

@@ -119,7 +119,15 @@ export default {
 
   // Update user profile
   async updateProfile(userId, updateData) {
-    const { name, email, currentPassword, newPassword } = updateData;
+    const {
+      name,
+      email,
+      currentPassword,
+      newPassword,
+      defaultOnlineFee,
+      defaultInPersonFee,
+      intakeFee,
+    } = updateData;
 
     // Find the user
     const user = await User.findById(userId);
@@ -159,6 +167,25 @@ export default {
       // Hash new password
       updates.passwordHash = await User.hashPassword(newPassword);
     }
+
+    const assignOptionalFee = (key, value) => {
+      if (value === undefined) return;
+      if (value === null || value === '') {
+        updates[key] = null;
+        return;
+      }
+
+      const normalized = Number(value);
+      if (!Number.isFinite(normalized) || normalized < 0) {
+        throw new HttpError(BAD_REQUEST, `${key} must be a non-negative number`);
+      }
+
+      updates[key] = Number(normalized.toFixed(2));
+    };
+
+    assignOptionalFee('defaultOnlineFee', defaultOnlineFee);
+    assignOptionalFee('defaultInPersonFee', defaultInPersonFee);
+    assignOptionalFee('intakeFee', intakeFee);
 
     // Update user
     const updatedUser = await User.findByIdAndUpdate(

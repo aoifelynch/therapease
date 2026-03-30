@@ -74,6 +74,21 @@ export const updateProfileSchema = {
       errorMessage:
         "'newPassword' must be at least 8 characters, include a number and an uppercase letter"
     }
+  },
+  defaultOnlineFee: {
+    in: ['body'],
+    optional: true,
+    isFloat: { options: { min: 0 }, errorMessage: "'defaultOnlineFee' must be a non-negative number" }
+  },
+  defaultInPersonFee: {
+    in: ['body'],
+    optional: true,
+    isFloat: { options: { min: 0 }, errorMessage: "'defaultInPersonFee' must be a non-negative number" }
+  },
+  intakeFee: {
+    in: ['body'],
+    optional: true,
+    isFloat: { options: { min: 0 }, errorMessage: "'intakeFee' must be a non-negative number" }
   }
 };
 
@@ -231,6 +246,21 @@ export const appointmentSchema = {
     in: ['body'],
     optional: true,
     isIn: { options: [['upcoming', 'completed', 'cancelled']], errorMessage: "'status' must be 'upcoming', 'completed', or 'cancelled'" }
+  },
+  paymentLinkTiming: {
+    in: ['body'],
+    optional: true,
+    isIn: { options: [['none', 'before', 'after']], errorMessage: "'paymentLinkTiming' must be 'none', 'before', or 'after'" }
+  },
+  autoSendPaymentLink: {
+    in: ['body'],
+    optional: true,
+    isBoolean: { errorMessage: "'autoSendPaymentLink' must be a boolean" }
+  },
+  quotedAmount: {
+    in: ['body'],
+    optional: true,
+    isFloat: { options: { min: 0.01 }, errorMessage: "'quotedAmount' must be greater than 0" }
   }
 };
 
@@ -274,6 +304,21 @@ export const appointmentUpdateSchema = {
     in: ['body'],
     optional: true,
     isIn: { options: [['upcoming', 'completed', 'cancelled']], errorMessage: "'status' must be 'upcoming', 'completed', or 'cancelled'" }
+  },
+  paymentLinkTiming: {
+    in: ['body'],
+    optional: true,
+    isIn: { options: [['none', 'before', 'after']], errorMessage: "'paymentLinkTiming' must be 'none', 'before', or 'after'" }
+  },
+  autoSendPaymentLink: {
+    in: ['body'],
+    optional: true,
+    isBoolean: { errorMessage: "'autoSendPaymentLink' must be a boolean" }
+  },
+  quotedAmount: {
+    in: ['body'],
+    optional: true,
+    isFloat: { options: { min: 0.01 }, errorMessage: "'quotedAmount' must be greater than 0" }
   }
 };
 

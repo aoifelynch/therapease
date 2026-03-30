@@ -67,6 +67,7 @@ export default {
       const clientId = String(client._id);
       const hasContactDetails = Boolean(client.email || client.phone);
       const hasAddress = Boolean(String(client.address || '').trim());
+      const hasDateOfBirth = Boolean(client.dateOfBirth);
       const hasEmergencyContactName = Boolean(String(client.emergencyContact?.name || '').trim());
       const hasEmergencyContactPhone = Boolean(String(client.emergencyContact?.phone || '').trim());
       const hasEmergencyContact = hasEmergencyContactName && hasEmergencyContactPhone;
@@ -98,6 +99,16 @@ export default {
           type: 'missing-address',
           status: 'pending',
           description: 'is missing an address in their profile.',
+        });
+      }
+
+      if (!hasDateOfBirth) {
+        issues.push({
+          id: `dob-${clientId}`,
+          client: clientId,
+          type: 'missing-dob',
+          status: 'pending',
+          description: 'is missing a date of birth in their profile.',
         });
       }
 

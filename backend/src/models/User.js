@@ -37,6 +37,24 @@ const userSchema = new mongoose.Schema(
     
     twoFactorTempSecret: {
       type: String
+    },
+
+    defaultOnlineFee: {
+      type: Number,
+      min: 0,
+      default: null
+    },
+
+    defaultInPersonFee: {
+      type: Number,
+      min: 0,
+      default: null
+    },
+
+    intakeFee: {
+      type: Number,
+      min: 0,
+      default: null
     }
   },
   { timestamps: true }

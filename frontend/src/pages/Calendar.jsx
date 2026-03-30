@@ -34,6 +34,12 @@ const getDateKey = (value) => {
   return `${year}-${month}-${day}`;
 };
 
+const parseFeeValue = (value) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) return '';
+  return numeric.toFixed(2);
+};
+
 const getCalendarDateFromQuery = (value) => {
   if (!value) return null;
 
@@ -190,6 +196,9 @@ export function Calendar() {
     endTime: '',
     type: 'in-person',
     status: 'upcoming',
+    paymentLinkTiming: 'none',
+    autoSendPaymentLink: false,
+    quotedAmount: '',
   });
   const [createForm, setCreateForm] = useState({
     clientId: '',
@@ -197,17 +206,27 @@ export function Calendar() {
     startTime: '',
     endTime: '',
     type: 'in-person',
+    paymentLinkTiming: 'none',
+    quotedAmount: '',
   });
   const startTimeOptions = useMemo(() => buildTimeOptions({ startHour: 8, endHour: 21, minuteStep: 5 }), []);
   const endTimeOptions = useMemo(() => buildTimeOptions({ startHour: 8, endHour: 22, minuteStep: 5 }), []);
+  const defaultOnlineFee = useMemo(() => parseFeeValue(user?.defaultOnlineFee), [user?.defaultOnlineFee]);
+  const defaultInPersonFee = useMemo(() => parseFeeValue(user?.defaultInPersonFee), [user?.defaultInPersonFee]);
+
+  const getDefaultFeeByType = (type) => (type === 'online' ? defaultOnlineFee : defaultInPersonFee);
 
   const resetCreateForm = () => {
+    const defaultQuotedAmount = getDefaultFeeByType('in-person');
+
     setCreateForm({
       clientId: '',
       date: '',
       startTime: '',
       endTime: '',
       type: 'in-person',
+      paymentLinkTiming: 'none',
+      quotedAmount: defaultQuotedAmount,
     });
     setCreateMessage('');
     setCreateTimeMessage('');
@@ -232,6 +251,9 @@ export function Calendar() {
       endTime: '',
       type: 'in-person',
       status: 'upcoming',
+      paymentLinkTiming: 'none',
+      autoSendPaymentLink: false,
+      quotedAmount: '',
     });
   };
 
@@ -247,10 +269,18 @@ export function Calendar() {
       endTime: createForm.endTime,
       type: createForm.type,
       status: 'upcoming',
+      paymentLinkTiming: createForm.paymentLinkTiming,
+      autoSendPaymentLink: createForm.paymentLinkTiming === 'before',
+      quotedAmount: createForm.paymentLinkTiming === 'none' ? undefined : Number(createForm.quotedAmount),
     };
 
     if (!payload.clientId || !payload.date || !payload.startTime || !payload.endTime || !payload.type) {
       setCreateMessage('Please complete all required fields.');
+      return;
+    }
+
+    if (payload.paymentLinkTiming !== 'none' && (!Number.isFinite(payload.quotedAmount) || payload.quotedAmount <= 0)) {
+      setCreateMessage('Add a quoted amount greater than 0 when sending a payment link.');
       return;
     }
 
@@ -332,6 +362,9 @@ export function Calendar() {
       endTime: appointment.endTime || '',
       type: appointment.type || 'in-person',
       status: appointment.status || 'upcoming',
+      paymentLinkTiming: appointment.paymentLinkTiming || 'none',
+      autoSendPaymentLink: Boolean(appointment.autoSendPaymentLink),
+      quotedAmount: appointment.quotedAmount ? Number(appointment.quotedAmount).toFixed(2) : '',
     });
     setAppointmentMessage('');
     setConfirmDeleteAppointment(false);
@@ -354,10 +387,18 @@ export function Calendar() {
       endTime: appointmentForm.endTime,
       type: appointmentForm.type,
       status: appointmentForm.status,
+      paymentLinkTiming: appointmentForm.paymentLinkTiming,
+      autoSendPaymentLink: appointmentForm.autoSendPaymentLink,
+      quotedAmount: appointmentForm.paymentLinkTiming === 'none' ? undefined : Number(appointmentForm.quotedAmount),
     };
 
     if (!payload.clientId || !payload.date || !payload.startTime || !payload.endTime || !payload.type) {
       setAppointmentMessage('Please complete all required fields.');
+      return;
+    }
+
+    if (payload.paymentLinkTiming !== 'none' && (!Number.isFinite(payload.quotedAmount) || payload.quotedAmount <= 0)) {
+      setAppointmentMessage('Add a quoted amount greater than 0 when sending a payment link.');
       return;
     }
 
@@ -546,6 +587,7 @@ export function Calendar() {
               type="button"
               onClick={() => {
                 setCreateMessage('');
+                resetCreateForm();
                 setShowCreateModal(true);
               }}
               className="rounded-2xl px-5 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90"
@@ -795,7 +837,16 @@ export function Calendar() {
                   </label>
                   <select
                     value={appointmentForm.type}
-                    onChange={(event) => setAppointmentForm((current) => ({ ...current, type: event.target.value }))}
+                    onChange={(event) => {
+                      const nextType = event.target.value;
+                      const defaultFee = getDefaultFeeByType(nextType);
+
+                      setAppointmentForm((current) => ({
+                        ...current,
+                        type: nextType,
+                        quotedAmount: current.quotedAmount || defaultFee,
+                      }));
+                    }}
                     required
                     className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
                     style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.92), color: theme.colors.secondary.charcoal }}
@@ -820,6 +871,58 @@ export function Calendar() {
                   </select>
                 </div>
               </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+                    Payment Link Timing
+                  </label>
+                  <select
+                    value={appointmentForm.paymentLinkTiming}
+                    onChange={(event) => {
+                      const nextTiming = event.target.value;
+                      setAppointmentForm((current) => ({
+                        ...current,
+                        paymentLinkTiming: nextTiming,
+                        autoSendPaymentLink: nextTiming === 'none' ? false : current.autoSendPaymentLink,
+                        quotedAmount: nextTiming === 'none' ? '' : (current.quotedAmount || getDefaultFeeByType(current.type)),
+                      }));
+                    }}
+                    className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+                    style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.92), color: theme.colors.secondary.charcoal }}
+                  >
+                    <option value="none">Do not send automatically</option>
+                    <option value="before">Send before session</option>
+                    <option value="after">Send after session</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+                    Quoted Amount (EUR)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={appointmentForm.quotedAmount}
+                    onChange={(event) => setAppointmentForm((current) => ({ ...current, quotedAmount: event.target.value }))}
+                    disabled={appointmentForm.paymentLinkTiming === 'none'}
+                    className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+                    style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.92), color: theme.colors.secondary.charcoal }}
+                  />
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 text-sm" style={{ color: theme.colors.secondary.charcoal }}>
+                <input
+                  type="checkbox"
+                  checked={appointmentForm.autoSendPaymentLink}
+                  onChange={(event) => setAppointmentForm((current) => ({ ...current, autoSendPaymentLink: event.target.checked }))}
+                  disabled={appointmentForm.paymentLinkTiming === 'none'}
+                />
+                Auto-send payment link when timing conditions are met
+              </label>
 
               {appointmentMessage && (
                 <div
@@ -1023,7 +1126,16 @@ export function Calendar() {
                 </label>
                 <select
                   value={createForm.type}
-                  onChange={(event) => setCreateForm((current) => ({ ...current, type: event.target.value }))}
+                  onChange={(event) => {
+                    const nextType = event.target.value;
+                    const defaultFee = getDefaultFeeByType(nextType);
+
+                    setCreateForm((current) => ({
+                      ...current,
+                      type: nextType,
+                      quotedAmount: current.quotedAmount || defaultFee,
+                    }));
+                  }}
                   required
                   className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
                   style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.92), color: theme.colors.secondary.charcoal }}
@@ -1031,6 +1143,47 @@ export function Calendar() {
                   <option value="in-person">In-person</option>
                   <option value="online">Online</option>
                 </select>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+                    Payment Link Timing
+                  </label>
+                  <select
+                    value={createForm.paymentLinkTiming}
+                    onChange={(event) => {
+                      const nextTiming = event.target.value;
+                      setCreateForm((current) => ({
+                        ...current,
+                        paymentLinkTiming: nextTiming,
+                        quotedAmount: nextTiming === 'none' ? '' : (current.quotedAmount || getDefaultFeeByType(current.type)),
+                      }));
+                    }}
+                    className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+                    style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.92), color: theme.colors.secondary.charcoal }}
+                  >
+                    <option value="none">Do not send automatically</option>
+                    <option value="before">Send before session</option>
+                    <option value="after">Send after session</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+                    Quoted Amount (EUR)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={createForm.quotedAmount}
+                    onChange={(event) => setCreateForm((current) => ({ ...current, quotedAmount: event.target.value }))}
+                    disabled={createForm.paymentLinkTiming === 'none'}
+                    className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+                    style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.92), color: theme.colors.secondary.charcoal }}
+                  />
+                </div>
               </div>
 
               {createMessage && (

@@ -44,6 +44,23 @@ const appointmentSchema = new mongoose.Schema(
       enum: ["upcoming", "completed", "cancelled"],
       default: "upcoming"
     },
+
+    paymentLinkTiming: {
+      type: String,
+      enum: ["none", "before", "after"],
+      default: "none"
+    },
+
+    autoSendPaymentLink: {
+      type: Boolean,
+      default: false
+    },
+
+    quotedAmount: {
+      type: Number,
+      min: 0,
+      default: null
+    },
     
     reminderSent: {
       type: Boolean,

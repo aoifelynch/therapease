@@ -117,12 +117,42 @@ export function Dashboard() {
 
   const allReminders = useMemo(() => ([...reminderIssues, ...reminders]), [reminderIssues, reminders]);
 
+  const groupedReminders = useMemo(() => {
+    const grouped = {};
+    allReminders.forEach((reminder) => {
+      const clientId = reminder.client;
+      if (!grouped[clientId]) {
+        grouped[clientId] = [];
+      }
+      grouped[clientId].push(reminder);
+    });
+    return grouped;
+  }, [allReminders]);
+
+  const remindersByClient = useMemo(() => {
+    return Object.entries(groupedReminders).map(([clientId, clientReminders]) => {
+      const firstReminder = clientReminders[0];
+      const descriptions = clientReminders
+        .map((r) => r.description.replace(/^is /, '').replace(/\.$/, ''))
+        .join(', ');
+      return {
+        client: clientId,
+        status: firstReminder.status,
+        type: firstReminder.type,
+        description: descriptions,
+        count: clientReminders.length,
+        rawReminders: clientReminders,
+      };
+    });
+  }, [groupedReminders]);
+
   const focusedClientId = location.state?.clientId || null;
   const focusedReminderType = location.state?.reminderType || null;
-  const prioritizedReminders = useMemo(() => {
-    if (!focusedClientId && !focusedReminderType) return allReminders;
+  
+  const prioritizedRemindersByClient = useMemo(() => {
+    if (!focusedClientId && !focusedReminderType) return remindersByClient;
 
-    return [...allReminders].sort((first, second) => {
+    return [...remindersByClient].sort((first, second) => {
       const firstMatch = (focusedClientId ? first.client === focusedClientId : true)
         && (focusedReminderType ? first.type === focusedReminderType : true);
       const secondMatch = (focusedClientId ? second.client === focusedClientId : true)
@@ -131,7 +161,7 @@ export function Dashboard() {
       if (firstMatch === secondMatch) return 0;
       return firstMatch ? -1 : 1;
     });
-  }, [allReminders, focusedClientId, focusedReminderType]);
+  }, [remindersByClient, focusedClientId, focusedReminderType]);
 
   useEffect(() => {
     const shouldFocusReminders = location.hash === '#reminders' || location.state?.focusReminders;
@@ -139,7 +169,7 @@ export function Dashboard() {
     if (!shouldFocusReminders || loading) return;
 
     remindersSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [loading, location.hash, location.state, prioritizedReminders.length]);
+  }, [loading, location.hash, location.state, prioritizedRemindersByClient.length]);
 
   // Stats cards data
   const statCards = [
@@ -320,19 +350,19 @@ export function Dashboard() {
               </div>
 
               <div className="space-y-3">
-                {(loading ? [] : prioritizedReminders.slice(0, 6)).map((reminder) => {
-                  const tone = componentStyles.getReminderTone(reminder.status);
-                  const reminderClient = clientLookup[reminder.client] || 'Practice reminder';
+                {(loading ? [] : prioritizedRemindersByClient.slice(0, 6)).map((reminderGroup) => {
+                  const tone = componentStyles.getReminderTone(reminderGroup.status);
+                  const reminderClient = clientLookup[reminderGroup.client] || 'Practice reminder';
                   const isFocusedReminder = Boolean(
-                    (focusedClientId ? reminder.client === focusedClientId : true)
-                    && (focusedReminderType ? reminder.type === focusedReminderType : true)
+                    (focusedClientId ? reminderGroup.client === focusedClientId : true)
+                    && (focusedReminderType ? reminderGroup.type === focusedReminderType : true)
                     && (focusedClientId || focusedReminderType),
                   );
 
                   return (
                     <Link
-                      to={`/clients/${reminder.client}`}
-                      key={reminder._id || reminder.id}
+                      to={`/clients/${reminderGroup.client}`}
+                      key={reminderGroup.client}
                       className="flex items-start gap-3 rounded-2xl px-3 py-3 no-underline transition-opacity hover:opacity-80"
                       style={{
                         backgroundColor: tone.background,
@@ -342,7 +372,7 @@ export function Dashboard() {
                       <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: tone.dot }} />
                       <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.82) }}>
                         <span className="font-semibold" style={{ color: theme.colors.secondary.charcoal }}>{reminderClient}</span>{' '}
-                        {reminder.description}
+                        is {reminderGroup.description}{reminderGroup.count > 1 ? ' (and more)' : ''}.
                       </p>
                     </Link>
                   );

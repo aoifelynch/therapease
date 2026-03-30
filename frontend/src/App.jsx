@@ -10,9 +10,9 @@ import { Calendar } from './pages/Calendar';
 import { ClientList } from './pages/ClientList';
 import { ClientProfile } from './pages/ClientProfile';
 import { LandingPage } from './pages/Landing';
-// import { Payments } from './pages/Payments';
-// import { PaymentSuccess } from './pages/PaymentSuccess';
-// import { PaymentCancelled } from './pages/PaymentCancelled';
+import { Payments } from './pages/Payments';
+import { PaymentSuccess } from './pages/PaymentSuccess';
+import { PaymentCancelled } from './pages/PaymentCancelled';
 
 function App() {
   return (
@@ -23,8 +23,8 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/2fa-verify" element={<Verify2FA />} />
           <Route path="/" element={<LandingPage />} />
-          {/* <Route path="/payment-success" element={<PaymentSuccess />} />
-          <Route path="/payment-cancelled" element={<PaymentCancelled />} /> */}
+          <Route path="/payment-success" element={<PaymentSuccess />} />
+          <Route path="/payment-cancelled" element={<PaymentCancelled />} />
           <Route
             path="/setup-2fa"
             element={
@@ -49,14 +49,14 @@ function App() {
               </ProtectedRoute>
             }
           />
-          {/* <Route
+          <Route
             path="/payments"
             element={
               <ProtectedRoute>
                 <Payments />
               </ProtectedRoute>
             }
-          /> */}
+          />
           <Route
             path="/calendar"
             element={

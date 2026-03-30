@@ -2,6 +2,11 @@ import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+export const getCheckoutSessionById = async (sessionId) => {
+  if (!sessionId) return null;
+  return stripe.checkout.sessions.retrieve(sessionId);
+};
+
 export const createCheckoutSession = async ({
   clientEmail,
   amount,
@@ -9,6 +14,12 @@ export const createCheckoutSession = async ({
   clientId,
   therapistId
 }) => {
+
+  const metadata = {
+    appointmentId: String(appointmentId || ''),
+    clientId: String(clientId || ''),
+    therapistId: String(therapistId || ''),
+  };
 
   const unitAmount = Math.round(Number(amount) * 100);
 
@@ -36,11 +47,7 @@ export const createCheckoutSession = async ({
 
     cancel_url: `${process.env.FRONTEND_URL}/payment-cancelled`,
 
-    metadata: {
-      appointmentId,
-      clientId,
-      therapistId
-    }
+    metadata
   });
 
   return session;

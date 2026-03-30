@@ -1,6 +1,8 @@
 import express from "express";
 import Stripe from "stripe";
 import Payment from "../models/Payment.js";
+import emailQueue from "../queues/emailQueue.js";
+import { paymentReceiptEmail } from "../utils/emailTemplates/paymentReceiptEmail.js";
 
 const router = express.Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -25,13 +27,49 @@ router.post("/stripe", express.raw({ type: "application/json" }), async (req, re
 
     const session = event.data.object;
 
-    await Payment.findOneAndUpdate(
-      { stripeSessionId: session.id },
+    let receiptURL;
+
+    if (session.payment_intent) {
+      try {
+        const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent, {
+          expand: ['latest_charge'],
+        });
+
+        receiptURL = paymentIntent?.latest_charge?.receipt_url;
+      } catch (error) {
+        console.error('Unable to fetch Stripe receipt URL:', error);
+      }
+    }
+
+    const updatedPayment = await Payment.findOneAndUpdate(
+      {
+        stripeSessionId: session.id,
+        status: { $ne: "paid" },
+      },
       {
         status: "paid",
-        stripePaymentIntentId: session.payment_intent
-      }
-    );
+        stripePaymentIntentId: session.payment_intent,
+        ...(receiptURL ? { receiptURL } : {}),
+      },
+      { new: true }
+    )
+      .populate("client")
+      .exec();
+
+    // Idempotent: only send receipt email when transitioning to paid the first time.
+    if (updatedPayment?.client?.email) {
+      const html = paymentReceiptEmail({
+        client: updatedPayment.client,
+        payment: updatedPayment,
+        receiptURL: updatedPayment.receiptURL,
+      });
+
+      await emailQueue.add("paymentReceipt", {
+        to: updatedPayment.client.email,
+        subject: "Your Payment Receipt - TherapEase",
+        html,
+      });
+    }
 
   }
 

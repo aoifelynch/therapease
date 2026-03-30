@@ -4,7 +4,7 @@ import { AppSidebar } from '../components/AppSidebar';
 import { clientsAPI, filesAPI, notesAPI } from '../api/api';
 import { useAuth } from '../context/AuthContext';
 import { theme } from '../utils/theme';
-import { withAlpha, formatLongDate, formatClock } from '../utils/formatters';
+import { withAlpha, formatLongDate, formatClock, formatCurrency } from '../utils/formatters';
 import { componentStyles } from '../utils/componentStyles';
 import { BackIcon, EditIcon, TrashIcon } from '../utils/icons';
 
@@ -20,6 +20,7 @@ export function ClientProfile() {
   const [appointments, setAppointments] = useState([]);
   const [files, setFiles] = useState([]);
   const [notes, setNotes] = useState([]);
+  const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [editingNoteId, setEditingNoteId] = useState(null);
@@ -46,6 +47,7 @@ export function ClientProfile() {
     lastName: '',
     email: '',
     phone: '',
+    dateOfBirth: '',
     address: '',
     emergencyContactName: '',
     emergencyContactPhone: '',
@@ -62,6 +64,7 @@ export function ClientProfile() {
       lastName: client.lastName || '',
       email: client.email || '',
       phone: client.phone || '',
+      dateOfBirth: client.dateOfBirth ? client.dateOfBirth.split('T')[0] : '',
       address: client.address || '',
       emergencyContactName: client.emergencyContact?.name || '',
       emergencyContactPhone: client.emergencyContact?.phone || '',
@@ -90,6 +93,7 @@ export function ClientProfile() {
     const normalizedLastName = editClientForm.lastName.trim().replace(/\s+/g, ' ');
     const normalizedEmail = editClientForm.email.trim().toLowerCase();
     const normalizedPhone = editClientForm.phone.trim();
+    const normalizedDateOfBirth = editClientForm.dateOfBirth.trim();
     const normalizedAddress = editClientForm.address.trim();
     const normalizedEmergencyContactName = editClientForm.emergencyContactName.trim();
     const normalizedEmergencyContactPhone = editClientForm.emergencyContactPhone.trim();
@@ -107,6 +111,7 @@ export function ClientProfile() {
         lastName: normalizedLastName,
         email: normalizedEmail,
         phone: normalizedPhone,
+        dateOfBirth: normalizedDateOfBirth || undefined,
         address: normalizedAddress || undefined,
         emergencyContact: (normalizedEmergencyContactName || normalizedEmergencyContactPhone)
           ? {
@@ -167,6 +172,7 @@ export function ClientProfile() {
         setAppointments(payload.appointments || []);
         setFiles(payload.files || []);
         setNotes(payload.notes || []);
+        setPayments(payload.payments || []);
 
         // Keep the editor closed/clean on load; users explicitly open it to start or edit notes.
         resetNoteEditor('');
@@ -176,6 +182,7 @@ export function ClientProfile() {
         setAppointments([]);
         setFiles([]);
         setNotes([]);
+        setPayments([]);
         resetNoteEditor('');
       } finally {
         setLoading(false);
@@ -735,6 +742,7 @@ export function ClientProfile() {
                     { id: 'notes', label: 'Notes' },
                     { id: 'files', label: 'Files' },
                     { id: 'appointments', label: 'Appointments' },
+                    { id: 'payments', label: 'Payments' },
                   ].map((tab) => (
                     <button
                       key={tab.id}
@@ -1080,6 +1088,79 @@ export function ClientProfile() {
                     )}
                   </div>
                 )}
+
+                {activeTab === 'payments' && (
+                  <div className="space-y-3">
+                    {payments.length > 0 ? (
+                      payments.map((payment) => {
+                        const paymentDate = new Date(payment.createdAt || payment.updatedAt || new Date());
+                        const hasDate = !Number.isNaN(paymentDate.getTime());
+                        const normalizedStatus = String(payment.status || 'pending').toLowerCase();
+
+                        const statusStyle = normalizedStatus === 'paid'
+                          ? {
+                            backgroundColor: withAlpha(theme.colors.secondary.sage, 0.95),
+                            color: theme.colors.primary.darker,
+                          }
+                          : normalizedStatus === 'failed'
+                            ? {
+                              backgroundColor: withAlpha(theme.colors.error.bg, 0.95),
+                              color: theme.colors.error.text,
+                            }
+                            : {
+                              backgroundColor: withAlpha(theme.colors.primary.lighter, 0.45),
+                              color: theme.colors.primary.darker,
+                            };
+
+                        return (
+                          <div key={payment.id || payment._id} className="rounded-2xl p-3" style={{ backgroundColor: withAlpha(theme.colors.secondary.cream, 0.8) }}>
+                            <div className="flex flex-wrap items-start justify-between gap-2">
+                              <div>
+                                <p className="text-sm font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
+                                  {formatCurrency(payment.amount)}
+                                </p>
+                                <p className="text-xs" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.65) }}>
+                                  {hasDate
+                                    ? new Intl.DateTimeFormat('en-IE', { day: 'numeric', month: 'short', year: 'numeric' }).format(paymentDate)
+                                    : 'Unknown date'}
+                                </p>
+                                {payment.appointment?.date && (
+                                  <p className="text-xs" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.65) }}>
+                                    Session: {new Intl.DateTimeFormat('en-IE', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(payment.appointment.date))}
+                                  </p>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <span className="rounded-full px-2.5 py-1 text-xs font-semibold capitalize" style={statusStyle}>
+                                  {normalizedStatus}
+                                </span>
+                                {payment.receiptURL && (
+                                  <a
+                                    href={payment.receiptURL}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="rounded-lg px-2.5 py-1 text-xs font-semibold"
+                                    style={{
+                                      backgroundColor: withAlpha(theme.colors.primary.DEFAULT, 0.12),
+                                      color: theme.colors.primary.darker,
+                                    }}
+                                  >
+                                    View Receipt
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.58) }}>
+                        No payment history yet.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {viewingNote && (
@@ -1242,6 +1323,19 @@ export function ClientProfile() {
                   value={editClientForm.phone}
                   onChange={(event) => setEditClientForm((current) => ({ ...current, phone: event.target.value }))}
                   required
+                  className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+                  style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+                  Date of Birth <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
+                </label>
+                <input
+                  type="date"
+                  value={editClientForm.dateOfBirth}
+                  onChange={(event) => setEditClientForm((current) => ({ ...current, dateOfBirth: event.target.value }))}
                   className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
                   style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
                 />

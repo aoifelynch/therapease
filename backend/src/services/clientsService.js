@@ -3,6 +3,7 @@ import Appointment from '../models/Appointment.js';
 import Note from '../models/Note.js';
 import File from '../models/File.js';
 import Reminder from '../models/Reminder.js';
+import Payment from '../models/Payment.js';
 import { HttpError, NOT_FOUND, FORBIDDEN, BAD_REQUEST } from '../utils/HttpError.js';
 
 export default {
@@ -31,12 +32,26 @@ export default {
       Reminder.find({ client: client._id }).sort({ createdAt: -1 }).exec(),
     ]);
 
+    const appointmentIds = appointments.map((appointment) => appointment._id);
+
+    const payments = await Payment.find({
+      therapist: userId,
+      $or: [
+        { client: client._id },
+        { appointment: { $in: appointmentIds } },
+      ],
+    })
+      .populate('appointment')
+      .sort({ createdAt: -1 })
+      .exec();
+
     return {
       client,
       appointments,
       notes,
       files,
-      reminders
+      reminders,
+      payments,
     };
   },
 

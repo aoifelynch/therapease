@@ -7,6 +7,8 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
+    "workers": "node src/workers/index.js",
+    "workers:dev": "nodemon src/workers/index.js",
     "worker": "node src/workers/emailWorker.js",
     "seed": "node utils/seed.js",
     "test": "cross-env NODE_ENV=test MONGODB_URI=mongodb://localhost:27017/test-db SESSION_SECRET=test-secret jest --runInBand",
