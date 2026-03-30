@@ -6,6 +6,7 @@ import { Login } from './pages/Login';
 import { Verify2FA } from './pages/Verify2FA';
 import { Setup2FA } from './pages/Setup2FA';
 import { Dashboard } from './pages/Dashboard';
+import { Calendar } from './pages/Calendar';
 import { ClientList } from './pages/ClientList';
 import { ClientProfile } from './pages/ClientProfile';
 import { LandingPage } from './pages/Landing';
@@ -40,6 +41,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <ClientList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/calendar"
+            element={
+              <ProtectedRoute>
+                <Calendar />
               </ProtectedRoute>
             }
           />

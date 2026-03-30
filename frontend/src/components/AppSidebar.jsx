@@ -16,6 +16,11 @@ export const AppSidebar = ({ activeNav, onNavSelect, user }) => {
       return;
     }
 
+    if (label === 'Calendar') {
+      navigate('/calendar');
+      return;
+    }
+
     if (label === 'Clients') {
       navigate('/clients');
     }

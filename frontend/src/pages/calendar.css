@@ -1,0 +1,122 @@
+.therapease-calendar-wrapper .fc {
+  --fc-border-color: rgba(229, 224, 216, 0.85);
+  --fc-page-bg-color: #ffffff;
+  --fc-neutral-bg-color: #f5f0e8;
+  --fc-now-indicator-color: #6b7e5a;
+}
+
+.therapease-calendar-wrapper {
+  max-height: 68vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.therapease-calendar-wrapper .fc-theme-standard th,
+.therapease-calendar-wrapper .fc-theme-standard td {
+  border-color: rgba(229, 224, 216, 0.9);
+}
+
+.therapease-calendar-wrapper .fc .fc-scrollgrid {
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(229, 224, 216, 0.85);
+}
+
+.therapease-calendar-wrapper .fc .fc-col-header-cell {
+  background-color: rgba(245, 240, 232, 0.45);
+}
+
+.therapease-calendar-wrapper .fc .fc-col-header {
+  position: sticky;
+  top: 0;
+  z-index: 7;
+}
+
+.therapease-calendar-wrapper .fc .fc-col-header-cell-cushion {
+  padding: 0.65rem 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #2d3a24;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.therapease-calendar-wrapper .fc .fc-timegrid-axis-cushion,
+.therapease-calendar-wrapper .fc .fc-timegrid-slot-label-cushion {
+  font-size: 0.73rem;
+  font-weight: 600;
+  color: rgba(45, 58, 36, 0.58);
+}
+
+.therapease-calendar-wrapper .fc .fc-timegrid-slot {
+  height: 1.95rem;
+}
+
+.therapease-calendar-wrapper .fc .fc-timegrid-now-indicator-arrow {
+  border-top-color: #6b7e5a;
+  border-bottom-color: #6b7e5a;
+}
+
+.therapease-calendar-wrapper .fc .fc-event {
+  border-radius: 0;
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
+  padding: 0;
+}
+
+.therapease-calendar-wrapper .fc .therapease-event-online {
+  background-color: rgba(200, 213, 185, 0.45);
+  border-left: 2px solid #4869e8;
+}
+
+.therapease-calendar-wrapper .fc .therapease-event-inperson {
+  background-color: rgba(245, 240, 232, 0.95);
+  border-left: 2px solid #ef7f1a;
+}
+
+.therapease-calendar-wrapper .fc .fc-event-main {
+  color: inherit;
+}
+
+.therapease-event-content {
+  min-height: 100%;
+  padding: 0.32rem 0.4rem;
+  line-height: 1.15;
+}
+
+.therapease-event-time {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(45, 58, 36, 0.68);
+}
+
+.therapease-event-client {
+  margin: 0.08rem 0 0;
+  font-size: 0.79rem;
+  font-weight: 700;
+  color: #2d3a24;
+}
+
+.therapease-event-type {
+  margin: 0.08rem 0 0;
+  font-size: 0.71rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: rgba(45, 58, 36, 0.78);
+}
+
+@media (max-width: 1024px) {
+  .therapease-calendar-wrapper {
+    max-height: 62vh;
+  }
+
+  .therapease-calendar-wrapper .fc .fc-timegrid-slot {
+    height: 2.25rem;
+  }
+
+  .therapease-calendar-wrapper .fc .fc-col-header-cell-cushion {
+    font-size: 0.8rem;
+  }
+}

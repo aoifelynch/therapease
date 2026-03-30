@@ -443,6 +443,11 @@ export function ClientProfile() {
     .filter((apt) => apt.status === 'upcoming')
     .sort((a, b) => new Date(a.date) - new Date(b.date))[0] || null;
 
+  const clientStatus = String(client.status || (nextAppointment ? 'active' : 'inactive')).toLowerCase() === 'active'
+    ? 'active'
+    : 'inactive';
+  const isClientActive = clientStatus === 'active';
+
   const canSaveNote = Boolean(noteContent.trim()) && Boolean(selectedAppointmentId);
 
   return (
@@ -490,7 +495,24 @@ export function ClientProfile() {
             <div className="space-y-4">
               {/* Client Info Card */}
               <div className="rounded-3xl p-6" style={componentStyles.card}>
-                <h2 className="mb-4 text-2xl font-semibold">{clientName}</h2>
+                <div className="mb-4 flex flex-wrap items-center gap-3">
+                  <h2 className="text-2xl font-semibold">{clientName}</h2>
+                  <button
+                    type="button"
+                    className="rounded-full px-3 py-1 text-xs font-semibold capitalize"
+                    style={{
+                      backgroundColor: isClientActive
+                        ? withAlpha(theme.colors.secondary.sage, 0.95)
+                        : withAlpha(theme.colors.secondary.beige, 0.7),
+                      color: isClientActive
+                        ? theme.colors.primary.darker
+                        : withAlpha(theme.colors.secondary.charcoal, 0.75),
+                    }}
+                    aria-label={`Client status: ${clientStatus}`}
+                  >
+                    {clientStatus}
+                  </button>
+                </div>
 
                 <div className="space-y-3 text-sm">
                   {client.email && (

@@ -1,6 +1,6 @@
 import Appointment from '../models/Appointment.js';
 import Client from '../models/Client.js';
-import { HttpError, NOT_FOUND, FORBIDDEN, BAD_REQUEST } from '../utils/HttpError.js';
+import { HttpError, NOT_FOUND, FORBIDDEN, BAD_REQUEST, INTERNAL_SERVER_ERROR } from '../utils/HttpError.js';
 import emailQueue from '../queues/emailQueue.js';
 import { appointmentEmail } from '../utils/emailTemplates/appointmentEmail.js';
 import { createZoomMeeting } from "../services/zoomService.js";
@@ -18,6 +18,88 @@ const getDayRange = (date) => {
   const end = new Date(start);
   end.setDate(end.getDate() + 1);
   return { start, end };
+};
+
+const parseTimeToMinutes = (value) => {
+  if (typeof value !== 'string') return null;
+
+  const [hoursValue, minutesValue] = value.split(':');
+  const hours = Number(hoursValue);
+  const minutes = Number(minutesValue);
+
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return null;
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+
+  return (hours * 60) + minutes;
+};
+
+const getAppointmentInterval = (dateValue, startTimeValue, endTimeValue) => {
+  const date = parseDate(dateValue);
+  const startMinutes = parseTimeToMinutes(startTimeValue);
+  const endMinutes = parseTimeToMinutes(endTimeValue);
+
+  if (!date || startMinutes === null || endMinutes === null) {
+    throw new HttpError(BAD_REQUEST, 'Invalid appointment date or time format');
+  }
+
+  if (endMinutes <= startMinutes) {
+    throw new HttpError(BAD_REQUEST, 'Appointment endTime must be after startTime');
+  }
+
+  const start = new Date(date);
+  start.setHours(Math.floor(startMinutes / 60), startMinutes % 60, 0, 0);
+
+  const end = new Date(date);
+  end.setHours(Math.floor(endMinutes / 60), endMinutes % 60, 0, 0);
+
+  return { start, end };
+};
+
+const hasOverlap = (startA, endA, startB, endB) => startA < endB && endA > startB;
+
+const ensureNoOverlappingAppointment = async ({
+  userId,
+  date,
+  startTime,
+  endTime,
+  excludeAppointmentId,
+}) => {
+  const { start, end } = getAppointmentInterval(date, startTime, endTime);
+  const { start: dayStart, end: dayEnd } = getDayRange(start);
+
+  const query = {
+    user: userId,
+    status: { $ne: 'cancelled' },
+    date: { $gte: dayStart, $lt: dayEnd },
+  };
+
+  if (excludeAppointmentId) {
+    query._id = { $ne: excludeAppointmentId };
+  }
+
+  const sameDayAppointments = await Appointment.find(query)
+    .select('date startTime endTime')
+    .lean()
+    .exec();
+
+  const conflictingAppointment = sameDayAppointments.find((current) => {
+    let currentInterval;
+
+    try {
+      currentInterval = getAppointmentInterval(current.date, current.startTime, current.endTime);
+    } catch {
+      throw new HttpError(
+        INTERNAL_SERVER_ERROR,
+        'Existing appointment data is invalid. Please contact support before booking this slot.',
+      );
+    }
+
+    return hasOverlap(start, end, currentInterval.start, currentInterval.end);
+  });
+
+  if (conflictingAppointment) {
+    throw new HttpError(BAD_REQUEST, 'This time slot is already booked. Please choose a different time.');
+  }
 };
 
 // check if appointment has passed (neeed to change status)
@@ -111,6 +193,13 @@ export default {
 
     const appointmentPayload = { ...rest };
 
+    await ensureNoOverlappingAppointment({
+      userId,
+      date: appointmentPayload.date,
+      startTime: appointmentPayload.startTime,
+      endTime: appointmentPayload.endTime,
+    });
+
     if (appointmentPayload.type === "online") {
       const zoomMeeting = await createZoomMeeting({
         date: appointmentPayload.date,
@@ -182,6 +271,21 @@ export default {
 
       updatedFields.client = client._id;
       delete updatedFields.clientId;
+    }
+
+    const nextDate = updatedFields.date || appointment.date;
+    const nextStartTime = updatedFields.startTime || appointment.startTime;
+    const nextEndTime = updatedFields.endTime || appointment.endTime;
+    const nextStatus = updatedFields.status || appointment.status;
+
+    if (nextStatus !== 'cancelled') {
+      await ensureNoOverlappingAppointment({
+        userId,
+        date: nextDate,
+        startTime: nextStartTime,
+        endTime: nextEndTime,
+        excludeAppointmentId: appointmentId,
+      });
     }
 
     const updatedAppointment = await Appointment.findByIdAndUpdate(
