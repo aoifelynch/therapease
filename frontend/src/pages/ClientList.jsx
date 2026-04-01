@@ -63,6 +63,7 @@ export function ClientList() {
 		phone: '',
 		dateOfBirth: '',
 		address: '',
+		profileNotes: '',
 		emergencyContactName: '',
 		emergencyContactPhone: '',
 	});
@@ -73,6 +74,7 @@ export function ClientList() {
 		phone: '',
 		dateOfBirth: '',
 		address: '',
+		profileNotes: '',
 		emergencyContactName: '',
 		emergencyContactPhone: '',
 	});
@@ -91,6 +93,7 @@ export function ClientList() {
 			phone: '',
 			dateOfBirth: '',
 			address: '',
+			profileNotes: '',
 			emergencyContactName: '',
 			emergencyContactPhone: '',
 		});
@@ -111,6 +114,7 @@ export function ClientList() {
 			phone: '',
 			dateOfBirth: '',
 			address: '',
+			profileNotes: '',
 			emergencyContactName: '',
 			emergencyContactPhone: '',
 		});
@@ -126,6 +130,7 @@ export function ClientList() {
 			phone: client.phone || '',
 			dateOfBirth: client.dateOfBirth ? client.dateOfBirth.split('T')[0] : '',
 			address: client.address || '',
+			profileNotes: client.profileNotes || '',
 			emergencyContactName: client.emergencyContact?.name || '',
 			emergencyContactPhone: client.emergencyContact?.phone || '',
 		});
@@ -157,6 +162,7 @@ export function ClientList() {
 		const normalizedPhone = createForm.phone.trim();
 		const normalizedDateOfBirth = createForm.dateOfBirth.trim();
 		const normalizedAddress = createForm.address.trim();
+		const normalizedProfileNotes = createForm.profileNotes.trim();
 		const normalizedEmergencyContactName = createForm.emergencyContactName.trim();
 		const normalizedEmergencyContactPhone = createForm.emergencyContactPhone.trim();
 
@@ -175,6 +181,7 @@ export function ClientList() {
 				phone: normalizedPhone,
 				dateOfBirth: normalizedDateOfBirth || undefined,
 				address: normalizedAddress || undefined,
+				profileNotes: normalizedProfileNotes || undefined,
 				emergencyContact: (normalizedEmergencyContactName || normalizedEmergencyContactPhone)
 					? {
 						name: normalizedEmergencyContactName || undefined,
@@ -212,6 +219,7 @@ export function ClientList() {
 		const normalizedPhone = editForm.phone.trim();
 		const normalizedDateOfBirth = editForm.dateOfBirth.trim();
 		const normalizedAddress = editForm.address.trim();
+		const normalizedProfileNotes = editForm.profileNotes.trim();
 		const normalizedEmergencyContactName = editForm.emergencyContactName.trim();
 		const normalizedEmergencyContactPhone = editForm.emergencyContactPhone.trim();
 
@@ -230,6 +238,7 @@ export function ClientList() {
 				phone: normalizedPhone,
 				dateOfBirth: normalizedDateOfBirth || undefined,
 				address: normalizedAddress || undefined,
+				profileNotes: normalizedProfileNotes || undefined,
 				emergencyContact: (normalizedEmergencyContactName || normalizedEmergencyContactPhone)
 					? {
 						name: normalizedEmergencyContactName || undefined,
@@ -697,10 +706,10 @@ export function ClientList() {
 			</main>
 			{showCreateModal && (
 				<div
-					className="fixed inset-0 z-40 flex items-center justify-center px-4"
+					className="fixed inset-0 z-40 flex items-center justify-center overflow-y-auto px-4 py-6"
 					style={{ backgroundColor: withAlpha(theme.colors.secondary.charcoal, 0.35) }}
 				>
-					<div className="w-full max-w-lg rounded-3xl p-6" style={componentStyles.card}>
+					<div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl p-6" style={componentStyles.card}>
 						<div className="mb-5 flex items-center justify-between gap-3">
 							<h3 className="text-xl font-semibold" style={componentStyles.sectionTitle}>Add Client</h3>
 							<button
@@ -719,34 +728,36 @@ export function ClientList() {
 						</div>
 
 						<form className="space-y-4" onSubmit={handleCreateClient}>
-							<div>
-								<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-									First Name <span style={{ color: theme.colors.error.text }}>*</span>
-								</label>
-								<input
-									type="text"
-									value={createForm.firstName}
-									onChange={(event) => setCreateForm((current) => ({ ...current, firstName: event.target.value }))}
-									placeholder="First name"
-									required
-									className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-									style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-								/>
-							</div>
+							<div className="grid grid-cols-2 gap-3">
+								<div>
+									<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+										First Name <span style={{ color: theme.colors.error.text }}>*</span>
+									</label>
+									<input
+										type="text"
+										value={createForm.firstName}
+										onChange={(event) => setCreateForm((current) => ({ ...current, firstName: event.target.value }))}
+										placeholder="First name"
+										required
+										className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+										style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
+									/>
+								</div>
 
-							<div>
-								<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-									Last Name <span style={{ color: theme.colors.error.text }}>*</span>
-								</label>
-								<input
-									type="text"
-									value={createForm.lastName}
-									onChange={(event) => setCreateForm((current) => ({ ...current, lastName: event.target.value }))}
-									placeholder="Last name"
-									required
-									className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-									style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-								/>
+								<div>
+									<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+										Last Name <span style={{ color: theme.colors.error.text }}>*</span>
+									</label>
+									<input
+										type="text"
+										value={createForm.lastName}
+										onChange={(event) => setCreateForm((current) => ({ ...current, lastName: event.target.value }))}
+										placeholder="Last name"
+										required
+										className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+										style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
+									/>
+								</div>
 							</div>
 
 							<div>
@@ -801,6 +812,21 @@ export function ClientList() {
 								value={createForm.address}
 								onChange={(event) => setCreateForm((current) => ({ ...current, address: event.target.value }))}
 								placeholder="Home address"
+								className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+								style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
+							/>
+						</div>
+
+						<div>
+							<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+								Profile Notes <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
+							</label>
+							<textarea
+								value={createForm.profileNotes}
+								onChange={(event) => setCreateForm((current) => ({ ...current, profileNotes: event.target.value }))}
+								placeholder="Add profile notes..."
+								rows={4}
+								maxLength={2000}
 								className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
 								style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
 							/>
@@ -881,10 +907,10 @@ export function ClientList() {
 			)}
 			{showEditModal && (
 				<div
-					className="fixed inset-0 z-40 flex items-center justify-center px-4"
+					className="fixed inset-0 z-40 flex items-center justify-center overflow-y-auto px-4 py-6"
 					style={{ backgroundColor: withAlpha(theme.colors.secondary.charcoal, 0.35) }}
 				>
-					<div className="w-full max-w-lg rounded-3xl p-6" style={componentStyles.card}>
+					<div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl p-6" style={componentStyles.card}>
 						<div className="mb-5 flex items-center justify-between gap-3">
 							<h3 className="text-xl font-semibold" style={componentStyles.sectionTitle}>Edit Client</h3>
 							<button
@@ -903,32 +929,36 @@ export function ClientList() {
 						</div>
 
 						<form className="space-y-4" onSubmit={handleEditClient}>
-							<div>
-								<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-									First Name <span style={{ color: theme.colors.error.text }}>*</span>
-								</label>
-								<input
-									type="text"
-									value={editForm.firstName}
-									onChange={(event) => setEditForm((current) => ({ ...current, firstName: event.target.value }))}
-									required
-									className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-									style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-								/>
-							</div>
+							<div className="grid grid-cols-2 gap-3">
+								<div>
+									<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+										First Name <span style={{ color: theme.colors.error.text }}>*</span>
+									</label>
+									<input
+										type="text"
+										value={editForm.firstName}
+										onChange={(event) => setEditForm((current) => ({ ...current, firstName: event.target.value }))}
+										placeholder="First name"
+										required
+										className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+										style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
+									/>
+								</div>
 
-							<div>
-								<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-									Last Name <span style={{ color: theme.colors.error.text }}>*</span>
-								</label>
-								<input
-									type="text"
-									value={editForm.lastName}
-									onChange={(event) => setEditForm((current) => ({ ...current, lastName: event.target.value }))}
-									required
-									className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-									style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-								/>
+								<div>
+									<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+										Last Name <span style={{ color: theme.colors.error.text }}>*</span>
+									</label>
+									<input
+										type="text"
+										value={editForm.lastName}
+										onChange={(event) => setEditForm((current) => ({ ...current, lastName: event.target.value }))}
+										placeholder="Last name"
+										required
+										className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+										style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
+									/>
+								</div>
 							</div>
 
 							<div>
@@ -939,6 +969,7 @@ export function ClientList() {
 									type="email"
 									value={editForm.email}
 									onChange={(event) => setEditForm((current) => ({ ...current, email: event.target.value }))}
+									placeholder="client@email.com"
 									required
 									className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
 									style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
@@ -953,6 +984,7 @@ export function ClientList() {
 									type="tel"
 									value={editForm.phone}
 									onChange={(event) => setEditForm((current) => ({ ...current, phone: event.target.value }))}
+									placeholder="+353..."
 									required
 									className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
 									style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
@@ -980,6 +1012,22 @@ export function ClientList() {
 								type="text"
 								value={editForm.address}
 								onChange={(event) => setEditForm((current) => ({ ...current, address: event.target.value }))}
+								placeholder="Home address"
+								className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+								style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
+							/>
+						</div>
+
+						<div>
+							<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+								Profile Notes <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
+							</label>
+							<textarea
+								value={editForm.profileNotes}
+								onChange={(event) => setEditForm((current) => ({ ...current, profileNotes: event.target.value }))}
+								placeholder="Add profile notes..."
+								rows={4}
+								maxLength={2000}
 								className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
 								style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
 							/>
@@ -994,6 +1042,7 @@ export function ClientList() {
 									type="text"
 										value={editForm.emergencyContactName}
 										onChange={(event) => setEditForm((current) => ({ ...current, emergencyContactName: event.target.value }))}
+										placeholder="Emergency contact"
 										className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
 										style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
 									/>
@@ -1006,6 +1055,7 @@ export function ClientList() {
 										type="tel"
 										value={editForm.emergencyContactPhone}
 										onChange={(event) => setEditForm((current) => ({ ...current, emergencyContactPhone: event.target.value }))}
+										placeholder="+353..."
 										className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
 										style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
 									/>

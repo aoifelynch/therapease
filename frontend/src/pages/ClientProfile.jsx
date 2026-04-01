@@ -49,6 +49,7 @@ export function ClientProfile() {
     phone: '',
     dateOfBirth: '',
     address: '',
+    profileNotes: '',
     emergencyContactName: '',
     emergencyContactPhone: '',
   });
@@ -66,6 +67,7 @@ export function ClientProfile() {
       phone: client.phone || '',
       dateOfBirth: client.dateOfBirth ? client.dateOfBirth.split('T')[0] : '',
       address: client.address || '',
+      profileNotes: client.profileNotes || '',
       emergencyContactName: client.emergencyContact?.name || '',
       emergencyContactPhone: client.emergencyContact?.phone || '',
     });
@@ -95,6 +97,7 @@ export function ClientProfile() {
     const normalizedPhone = editClientForm.phone.trim();
     const normalizedDateOfBirth = editClientForm.dateOfBirth.trim();
     const normalizedAddress = editClientForm.address.trim();
+    const normalizedProfileNotes = editClientForm.profileNotes.trim();
     const normalizedEmergencyContactName = editClientForm.emergencyContactName.trim();
     const normalizedEmergencyContactPhone = editClientForm.emergencyContactPhone.trim();
 
@@ -113,6 +116,7 @@ export function ClientProfile() {
         phone: normalizedPhone,
         dateOfBirth: normalizedDateOfBirth || undefined,
         address: normalizedAddress || undefined,
+        profileNotes: normalizedProfileNotes || undefined,
         emergencyContact: (normalizedEmergencyContactName || normalizedEmergencyContactPhone)
           ? {
             name: normalizedEmergencyContactName || undefined,
@@ -646,6 +650,12 @@ export function ClientProfile() {
                     <div>
                       <p style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6) }}>Address</p>
                       <p className="text-base font-medium">{client.address}</p>
+                    </div>
+                  )}
+                  {client.profileNotes && (
+                    <div>
+                      <p style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6) }}>Profile Notes</p>
+                      <p className="text-base font-medium whitespace-pre-wrap">{client.profileNotes}</p>
                     </div>
                   )}
                 </div>
@@ -1272,32 +1282,36 @@ export function ClientProfile() {
             </div>
 
             <form className="space-y-4" onSubmit={handleSaveClientDetails}>
-              <div>
-                <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-                  First Name <span style={{ color: theme.colors.error.text }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  value={editClientForm.firstName}
-                  onChange={(event) => setEditClientForm((current) => ({ ...current, firstName: event.target.value }))}
-                  required
-                  className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-                  style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-                />
-              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+                    First Name <span style={{ color: theme.colors.error.text }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editClientForm.firstName}
+                    onChange={(event) => setEditClientForm((current) => ({ ...current, firstName: event.target.value }))}
+                    placeholder="First name"
+                    required
+                    className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+                    style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
+                  />
+                </div>
 
-              <div>
-                <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-                  Last Name <span style={{ color: theme.colors.error.text }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  value={editClientForm.lastName}
-                  onChange={(event) => setEditClientForm((current) => ({ ...current, lastName: event.target.value }))}
-                  required
-                  className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-                  style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-                />
+                <div>
+                  <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+                    Last Name <span style={{ color: theme.colors.error.text }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editClientForm.lastName}
+                    onChange={(event) => setEditClientForm((current) => ({ ...current, lastName: event.target.value }))}
+                    placeholder="Last name"
+                    required
+                    className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+                    style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
+                  />
+                </div>
               </div>
 
               <div>
@@ -1349,6 +1363,20 @@ export function ClientProfile() {
                   type="text"
                   value={editClientForm.address}
                   onChange={(event) => setEditClientForm((current) => ({ ...current, address: event.target.value }))}
+                  className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+                  style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+                  Profile Notes <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
+                </label>
+                <textarea
+                  value={editClientForm.profileNotes}
+                  onChange={(event) => setEditClientForm((current) => ({ ...current, profileNotes: event.target.value }))}
+                  rows={4}
+                  maxLength={2000}
                   className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
                   style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
                 />

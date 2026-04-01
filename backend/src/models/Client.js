@@ -20,6 +20,7 @@ const clientSchema = new mongoose.Schema(
 
     dateOfBirth: Date,
     address: String,
+    profileNotes: { type: String, trim: true },
 
     emergencyContact: {
       name: String,

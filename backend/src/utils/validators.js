@@ -176,6 +176,13 @@ export const clientSchema = {
     isLength: { options: { max: 300 }, errorMessage: "'address' max length is 300 chars" },
     trim: true
   },
+  profileNotes: {
+    in: ['body'],
+    optional: true,
+    isString: { errorMessage: "'profileNotes' must be a string" },
+    isLength: { options: { max: 2000 }, errorMessage: "'profileNotes' max length is 2000 chars" },
+    trim: true
+  },
   'emergencyContact.name': {
     in: ['body'],
     optional: true,
