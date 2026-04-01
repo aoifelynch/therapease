@@ -381,28 +381,30 @@ export function ClientList() {
 			const missingNotes = clientIssues.find((issue) => issue.type === 'missing-notes');
 			const missingEmergencyContact = clientIssues.find((issue) => issue.type === 'missing-emergency-contact');
 			const missingAddress = clientIssues.find((issue) => issue.type === 'missing-address');
-			const hasEmergencyContactName = Boolean(String(client.emergencyContact?.name || '').trim());
-			const hasEmergencyContactPhone = Boolean(String(client.emergencyContact?.phone || '').trim());
-			const hasEmergencyContactDetails = hasEmergencyContactName && hasEmergencyContactPhone;
-			const hasAddress = Boolean(String(client.address || '').trim());
-			const missingNotesCount = missingNotes?.missingNotesCount || 0;
-			const status = nextAppointment ? 'active' : 'inactive';
-			const actionsNeeded = [];
+		const missingDateOfBirth = clientIssues.find((issue) => issue.type === 'missing-dob');
+		const hasEmergencyContactName = Boolean(String(client.emergencyContact?.name || '').trim());
+		const hasEmergencyContactPhone = Boolean(String(client.emergencyContact?.phone || '').trim());
+		const hasEmergencyContactDetails = hasEmergencyContactName && hasEmergencyContactPhone;
+		const hasAddress = Boolean(String(client.address || '').trim());
+		const hasDateOfBirth = Boolean(client.dateOfBirth);
+		const missingNotesCount = missingNotes?.missingNotesCount || 0;
+		const status = nextAppointment ? 'active' : 'inactive';
+		const actionsNeeded = [];
 
-			if (missingNotes) {
-				actionsNeeded.push(`Write ${missingNotesCount} session note${missingNotesCount === 1 ? '' : 's'}`);
-			}
+		if (missingNotes) {
+			actionsNeeded.push(`Write ${missingNotesCount} session note${missingNotesCount === 1 ? '' : 's'}`);
+		}
 
-			if (missingEmergencyContact || !hasEmergencyContactDetails) {
-				actionsNeeded.push('Add emergency contact');
-			}
+		if (missingEmergencyContact || !hasEmergencyContactDetails) {
+			actionsNeeded.push('Add emergency contact');
+		}
 
-			if (missingAddress || !hasAddress) {
-				actionsNeeded.push('Add address');
-			}
+		if (missingAddress || !hasAddress) {
+			actionsNeeded.push('Add address');
+		}
 
-			if (missingContact) {
-				actionsNeeded.push('Add contact details');
+		if (missingDateOfBirth || !hasDateOfBirth) {
+			actionsNeeded.push('Add date of birth');
 			}
 
 			const actionsNeededDetails = actionsNeeded.join(' • ');

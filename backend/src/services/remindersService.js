@@ -13,7 +13,7 @@ export default {
   // Compute action-needed reminder issues from core data
   async getReminderIssues(userId) {
     const clients = await Client.find({ user: userId })
-      .select('firstName lastName email phone address emergencyContact')
+      .select('firstName lastName email phone dateOfBirth address emergencyContact')
       .lean()
       .exec();
 

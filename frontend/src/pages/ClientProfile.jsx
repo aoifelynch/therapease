@@ -42,6 +42,14 @@ export function ClientProfile() {
   const [showDeleteClientModal, setShowDeleteClientModal] = useState(false);
   const [deleteClientBusy, setDeleteClientBusy] = useState(false);
   const [deleteClientMessage, setDeleteClientMessage] = useState('');
+  const [showDeleteNoteModal, setShowDeleteNoteModal] = useState(false);
+  const [noteToDelete, setNoteToDelete] = useState(null);
+  const [deleteNoteBusy, setDeleteNoteBusy] = useState(false);
+  const [deleteNoteMessage, setDeleteNoteMessage] = useState('');
+  const [showDeleteFileModal, setShowDeleteFileModal] = useState(false);
+  const [fileToDelete, setFileToDelete] = useState(null);
+  const [deleteFileBusy, setDeleteFileBusy] = useState(false);
+  const [deleteFileMessage, setDeleteFileMessage] = useState('');
   const [editClientForm, setEditClientForm] = useState({
     firstName: '',
     lastName: '',
@@ -85,6 +93,20 @@ export function ClientProfile() {
     if (deleteClientBusy) return;
     setShowDeleteClientModal(false);
     setDeleteClientMessage('');
+  };
+
+  const closeDeleteNoteModal = () => {
+    if (deleteNoteBusy) return;
+    setShowDeleteNoteModal(false);
+    setNoteToDelete(null);
+    setDeleteNoteMessage('');
+  };
+
+  const closeDeleteFileModal = () => {
+    if (deleteFileBusy) return;
+    setShowDeleteFileModal(false);
+    setFileToDelete(null);
+    setDeleteFileMessage('');
   };
 
   const handleSaveClientDetails = async (event) => {
@@ -354,26 +376,32 @@ export function ClientProfile() {
     setNoteStatusMessage('Changes discarded');
   };
 
-  const handleDeleteNote = async (noteId) => {
-    const shouldDelete = window.confirm('Delete this note?');
-    if (!shouldDelete) return;
+  const handleDeleteNote = (noteId) => {
+    setNoteToDelete({ id: noteId });
+    setDeleteNoteMessage('');
+    setShowDeleteNoteModal(true);
+  };
 
-    setNoteBusy(true);
-    setNoteStatusMessage('');
+  const handleConfirmDeleteNote = async () => {
+    if (!noteToDelete?.id) return;
+
+    setDeleteNoteBusy(true);
+    setDeleteNoteMessage('');
 
     try {
-      await notesAPI.delete(noteId);
-      setNotes((current) => current.filter((note) => (note.id || note._id) !== noteId));
+      await notesAPI.delete(noteToDelete.id);
+      setNotes((current) => current.filter((note) => (note.id || note._id) !== noteToDelete.id));
 
-      if (editingNoteId === noteId) {
+      if (editingNoteId === noteToDelete.id) {
         resetNoteEditor('');
       }
 
       setNoteStatusMessage('Note deleted');
+      closeDeleteNoteModal();
     } catch (requestError) {
-      setNoteStatusMessage(requestError.response?.data?.message || 'Unable to delete note');
+      setDeleteNoteMessage(requestError.response?.data?.message || requestError.message || 'Unable to delete note');
     } finally {
-      setNoteBusy(false);
+      setDeleteNoteBusy(false);
     }
   };
 
@@ -425,21 +453,27 @@ export function ClientProfile() {
     window.open(targetUrl, '_blank', 'noopener,noreferrer');
   };
 
-  const handleDeleteFile = async (fileId) => {
-    const shouldDelete = window.confirm('Delete this file?');
-    if (!shouldDelete) return;
+  const handleDeleteFile = (fileId) => {
+    setFileToDelete({ id: fileId });
+    setDeleteFileMessage('');
+    setShowDeleteFileModal(true);
+  };
 
-    setFileBusyId(fileId);
-    setFileStatusMessage('');
+  const handleConfirmDeleteFile = async () => {
+    if (!fileToDelete?.id) return;
+
+    setDeleteFileBusy(true);
+    setDeleteFileMessage('');
 
     try {
-      await filesAPI.delete(fileId);
-      setFiles((current) => current.filter((file) => (file._id || file.id) !== fileId));
+      await filesAPI.delete(fileToDelete.id);
+      setFiles((current) => current.filter((file) => (file._id || file.id) !== fileToDelete.id));
       setFileStatusMessage('File deleted');
+      closeDeleteFileModal();
     } catch (requestError) {
-      setFileStatusMessage(requestError.response?.data?.message || 'Unable to delete file');
+      setDeleteFileMessage(requestError.response?.data?.message || requestError.message || 'Unable to delete file');
     } finally {
-      setFileBusyId(null);
+      setDeleteFileBusy(false);
     }
   };
 
@@ -1491,6 +1525,102 @@ export function ClientProfile() {
                 }}
               >
                 {deleteClientBusy ? 'Deleting...' : 'Delete Client'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteNoteModal && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-3xl p-6" style={componentStyles.card}>
+            <h3 className="text-xl font-semibold" style={componentStyles.sectionTitle}>Delete Note</h3>
+            <p className="mt-3 text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.76) }}>
+              This action cannot be undone. Are you sure you want to delete this note?
+            </p>
+
+            {deleteNoteMessage && (
+              <div
+                className="mt-4 rounded-xl px-3 py-2 text-sm"
+                style={{
+                  backgroundColor: withAlpha(theme.colors.error.bg, 0.9),
+                  border: `1px solid ${theme.colors.error.border}`,
+                  color: theme.colors.error.text,
+                }}
+              >
+                {deleteNoteMessage}
+              </div>
+            )}
+
+            <div className="mt-6 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeDeleteNoteModal}
+                disabled={deleteNoteBusy}
+                className="rounded-xl px-4 py-2 text-sm font-medium"
+                style={{ backgroundColor: withAlpha(theme.colors.secondary.beige, 0.7), color: theme.colors.secondary.charcoal }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteNote}
+                disabled={deleteNoteBusy}
+                className="rounded-xl px-4 py-2 text-sm font-semibold"
+                style={{
+                  backgroundColor: deleteNoteBusy ? withAlpha(theme.colors.error.text, 0.6) : theme.colors.error.text,
+                  color: theme.colors.gray[50],
+                }}
+              >
+                {deleteNoteBusy ? 'Deleting...' : 'Delete Note'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteFileModal && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-3xl p-6" style={componentStyles.card}>
+            <h3 className="text-xl font-semibold" style={componentStyles.sectionTitle}>Delete File</h3>
+            <p className="mt-3 text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.76) }}>
+              This action cannot be undone. Are you sure you want to delete this file?
+            </p>
+
+            {deleteFileMessage && (
+              <div
+                className="mt-4 rounded-xl px-3 py-2 text-sm"
+                style={{
+                  backgroundColor: withAlpha(theme.colors.error.bg, 0.9),
+                  border: `1px solid ${theme.colors.error.border}`,
+                  color: theme.colors.error.text,
+                }}
+              >
+                {deleteFileMessage}
+              </div>
+            )}
+
+            <div className="mt-6 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeDeleteFileModal}
+                disabled={deleteFileBusy}
+                className="rounded-xl px-4 py-2 text-sm font-medium"
+                style={{ backgroundColor: withAlpha(theme.colors.secondary.beige, 0.7), color: theme.colors.secondary.charcoal }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteFile}
+                disabled={deleteFileBusy}
+                className="rounded-xl px-4 py-2 text-sm font-semibold"
+                style={{
+                  backgroundColor: deleteFileBusy ? withAlpha(theme.colors.error.text, 0.6) : theme.colors.error.text,
+                  color: theme.colors.gray[50],
+                }}
+              >
+                {deleteFileBusy ? 'Deleting...' : 'Delete File'}
               </button>
             </div>
           </div>

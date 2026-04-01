@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { toast } from '../utils/toastBus';
 
 const clearAuthStorage = () => {
   localStorage.removeItem('accessToken');
@@ -70,7 +71,24 @@ api.interceptors.request.use(
 
 // Response interceptor to handle errors globally
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const method = String(response.config?.method || '').toLowerCase();
+    const shouldToastSuccess = method && method !== 'get' && !response.config?.skipSuccessToast;
+
+    if (shouldToastSuccess) {
+      const successMessage = String(
+        response.config?.toastSuccessMessage
+        || response.data?.message
+        || 'Action completed successfully.',
+      ).trim();
+
+      if (successMessage) {
+        toast.success(successMessage);
+      }
+    }
+
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
     const status = error.response?.status;
@@ -107,6 +125,20 @@ api.interceptors.response.use(
     if (status === 401) {
       clearAuthStorage();
       redirectToLogin();
+    }
+
+    const shouldToastError = !originalRequest?.skipErrorToast;
+    if (shouldToastError) {
+      const errorMessage = String(
+        error.response?.data?.message
+        || error.response?.data?.error
+        || error.message
+        || 'Something went wrong.',
+      ).trim();
+
+      if (errorMessage) {
+        toast.error(errorMessage);
+      }
     }
 
     return Promise.reject(error);
@@ -182,7 +214,9 @@ export const appointmentsAPI = {
   },
 
   async create(appointmentData) {
-    const response = await api.post('/appointments', appointmentData);
+    const response = await api.post('/appointments', appointmentData, {
+      toastSuccessMessage: 'Appointment created. A confirmation email has been sent to the client.',
+    });
     return response.data;
   },
 

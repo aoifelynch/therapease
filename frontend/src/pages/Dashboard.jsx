@@ -26,8 +26,11 @@ export function Dashboard() {
   const [appointments, setAppointments] = useState([]);
   const [reminderIssues, setReminderIssues] = useState([]);
   const [payments, setPayments] = useState([]);
-  const [reminders, setReminders] = useState([]);
   const [todos, setTodos] = useState([]);
+  const [showDeleteTodoModal, setShowDeleteTodoModal] = useState(false);
+  const [todoToDelete, setTodoToDelete] = useState(null);
+  const [deleteTodoBusy, setDeleteTodoBusy] = useState(false);
+  const [deleteTodoMessage, setDeleteTodoMessage] = useState('');
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -43,12 +46,11 @@ export function Dashboard() {
       setError('');
 
       try {
-        const [clientsResponse, appointmentsResponse, issuesResponse, paymentsResponse, remindersResponse, todosResponse] = await Promise.all([
+        const [clientsResponse, appointmentsResponse, issuesResponse, paymentsResponse, todosResponse] = await Promise.all([
           clientsAPI.getAll(),
           appointmentsAPI.getAll(),
           remindersAPI.getIssues(),
           paymentsAPI.getAll(),
-          remindersAPI.getAll(),
           todosAPI.getAll(),
         ]);
 
@@ -56,7 +58,6 @@ export function Dashboard() {
         setAppointments(appointmentsResponse.data || []);
         setReminderIssues(issuesResponse.data || []);
         setPayments(paymentsResponse.data || []);
-        setReminders(remindersResponse.data || []);
         setTodos(todosResponse.data || []);
       } catch (requestError) {
         setError(requestError.response?.data?.message || requestError.message || 'Unable to load dashboard');
@@ -115,7 +116,7 @@ export function Dashboard() {
     return lookup;
   }, {});
 
-  const allReminders = useMemo(() => ([...reminderIssues, ...reminders]), [reminderIssues, reminders]);
+  const allReminders = useMemo(() => ([...reminderIssues]), [reminderIssues]);
 
   const groupedReminders = useMemo(() => {
     const grouped = {};
@@ -245,17 +246,34 @@ export function Dashboard() {
       setTodoBusyId(null);
     }
   };
-  const handleDeleteTodo = async (todoId) => {
-    setTodoBusyId(todoId);
-    setError('');
+
+  const closeDeleteTodoModal = () => {
+    if (deleteTodoBusy) return;
+    setShowDeleteTodoModal(false);
+    setTodoToDelete(null);
+    setDeleteTodoMessage('');
+  };
+
+  const handleDeleteTodo = (todoId) => {
+    setTodoToDelete({ id: todoId });
+    setDeleteTodoMessage('');
+    setShowDeleteTodoModal(true);
+  };
+
+  const handleConfirmDeleteTodo = async () => {
+    if (!todoToDelete?.id) return;
+
+    setDeleteTodoBusy(true);
+    setDeleteTodoMessage('');
 
     try {
-      await todosAPI.delete(todoId);
-      setTodos((current) => current.filter((item) => (item.id || item._id) !== todoId));
+      await todosAPI.delete(todoToDelete.id);
+      setTodos((current) => current.filter((item) => (item.id || item._id) !== todoToDelete.id));
+      closeDeleteTodoModal();
     } catch (requestError) {
-      setError(requestError.response?.data?.error || requestError.response?.data?.message || requestError.message || 'Unable to delete task');
+      setDeleteTodoMessage(requestError.response?.data?.error || requestError.response?.data?.message || requestError.message || 'Unable to delete task');
     } finally {
-      setTodoBusyId(null);
+      setDeleteTodoBusy(false);
     }
   };
 
@@ -600,6 +618,54 @@ export function Dashboard() {
             </div>
           </section>
         </div>
+
+        {showDeleteTodoModal && (
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+            <div className="w-full max-w-md rounded-3xl p-6" style={componentStyles.card}>
+              <h3 className="text-xl font-semibold" style={componentStyles.sectionTitle}>Delete Task</h3>
+              <p className="mt-3 text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.76) }}>
+                This action cannot be undone. Are you sure you want to delete this task?
+              </p>
+
+              {deleteTodoMessage && (
+                <div
+                  className="mt-4 rounded-xl px-3 py-2 text-sm"
+                  style={{
+                    backgroundColor: withAlpha(theme.colors.error.bg, 0.9),
+                    border: `1px solid ${theme.colors.error.border}`,
+                    color: theme.colors.error.text,
+                  }}
+                >
+                  {deleteTodoMessage}
+                </div>
+              )}
+
+              <div className="mt-6 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={closeDeleteTodoModal}
+                  disabled={deleteTodoBusy}
+                  className="rounded-xl px-4 py-2 text-sm font-medium"
+                  style={{ backgroundColor: withAlpha(theme.colors.secondary.beige, 0.7), color: theme.colors.secondary.charcoal }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDeleteTodo}
+                  disabled={deleteTodoBusy}
+                  className="rounded-xl px-4 py-2 text-sm font-semibold"
+                  style={{
+                    backgroundColor: deleteTodoBusy ? withAlpha(theme.colors.error.text, 0.6) : theme.colors.error.text,
+                    color: theme.colors.gray[50],
+                  }}
+                >
+                  {deleteTodoBusy ? 'Deleting...' : 'Delete Task'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

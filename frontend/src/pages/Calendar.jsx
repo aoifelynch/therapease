@@ -188,6 +188,8 @@ export function Calendar() {
   const [appointmentBusy, setAppointmentBusy] = useState(false);
   const [appointmentDeleteBusy, setAppointmentDeleteBusy] = useState(false);
   const [appointmentMessage, setAppointmentMessage] = useState('');
+  const [showDeleteAppointmentModal, setShowDeleteAppointmentModal] = useState(false);
+  const [deleteAppointmentMessage, setDeleteAppointmentMessage] = useState('');
   const [confirmDeleteAppointment, setConfirmDeleteAppointment] = useState(false);
   const [appointmentForm, setAppointmentForm] = useState({
     clientId: '',
@@ -255,6 +257,12 @@ export function Calendar() {
       autoSendPaymentLink: false,
       quotedAmount: '',
     });
+  };
+
+  const closeDeleteAppointmentModal = () => {
+    if (appointmentDeleteBusy) return;
+    setShowDeleteAppointmentModal(false);
+    setDeleteAppointmentMessage('');
   };
 
   const handleCreateAppointment = async (event) => {
@@ -430,22 +438,32 @@ export function Calendar() {
     }
   };
 
-  const handleDeleteAppointment = async () => {
-    setAppointmentMessage('');
-
+  const handleDeleteAppointment = () => {
     if (!selectedAppointmentId) {
       setAppointmentMessage('No appointment selected.');
       return;
     }
 
+    setDeleteAppointmentMessage('');
+    setShowDeleteAppointmentModal(true);
+  };
+
+  const handleConfirmDeleteAppointment = async () => {
+    if (!selectedAppointmentId) {
+      setDeleteAppointmentMessage('No appointment selected.');
+      return;
+    }
+
     setAppointmentDeleteBusy(true);
+    setDeleteAppointmentMessage('');
 
     try {
       await appointmentsAPI.delete(selectedAppointmentId);
       setAppointments((current) => current.filter((item) => String(item.id || item._id) !== String(selectedAppointmentId)));
+      closeDeleteAppointmentModal();
       closeAppointmentModal();
     } catch (requestError) {
-      setAppointmentMessage(requestError.response?.data?.message || requestError.message || 'Unable to delete appointment');
+      setDeleteAppointmentMessage(requestError.response?.data?.message || requestError.message || 'Unable to delete appointment');
     } finally {
       setAppointmentDeleteBusy(false);
     }
@@ -914,16 +932,6 @@ export function Calendar() {
                 </div>
               </div>
 
-              <label className="flex items-center gap-2 text-sm" style={{ color: theme.colors.secondary.charcoal }}>
-                <input
-                  type="checkbox"
-                  checked={appointmentForm.autoSendPaymentLink}
-                  onChange={(event) => setAppointmentForm((current) => ({ ...current, autoSendPaymentLink: event.target.checked }))}
-                  disabled={appointmentForm.paymentLinkTiming === 'none'}
-                />
-                Auto-send payment link when timing conditions are met
-              </label>
-
               {appointmentMessage && (
                 <div
                   className="rounded-xl px-3 py-2 text-sm"
@@ -953,7 +961,7 @@ export function Calendar() {
               <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setConfirmDeleteAppointment((current) => !current)}
+                  onClick={handleDeleteAppointment}
                   disabled={appointmentBusy || appointmentDeleteBusy}
                   className="rounded-xl px-4 py-2 text-sm font-semibold"
                   style={{
@@ -961,25 +969,10 @@ export function Calendar() {
                     color: theme.colors.error.text,
                   }}
                 >
-                  {confirmDeleteAppointment ? 'Cancel Delete' : 'Delete Appointment'}
+                  Delete Appointment
                 </button>
 
                 <div className="flex items-center gap-2">
-                  {confirmDeleteAppointment && (
-                    <button
-                      type="button"
-                      onClick={handleDeleteAppointment}
-                      disabled={appointmentBusy || appointmentDeleteBusy}
-                      className="rounded-xl px-4 py-2 text-sm font-semibold"
-                      style={{
-                        backgroundColor: appointmentDeleteBusy ? withAlpha(theme.colors.error.text, 0.6) : theme.colors.error.text,
-                        color: theme.colors.gray[50],
-                      }}
-                    >
-                      {appointmentDeleteBusy ? 'Deleting...' : 'Confirm Delete'}
-                    </button>
-                  )}
-
                   <button
                     type="submit"
                     disabled={appointmentBusy || appointmentDeleteBusy}
@@ -1225,6 +1218,54 @@ export function Calendar() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showDeleteAppointmentModal && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-3xl p-6" style={componentStyles.card}>
+            <h3 className="text-xl font-semibold" style={componentStyles.sectionTitle}>Delete Appointment</h3>
+            <p className="mt-3 text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.76) }}>
+              This action cannot be undone. Are you sure you want to delete this appointment?
+            </p>
+
+            {deleteAppointmentMessage && (
+              <div
+                className="mt-4 rounded-xl px-3 py-2 text-sm"
+                style={{
+                  backgroundColor: withAlpha(theme.colors.error.bg, 0.9),
+                  border: `1px solid ${theme.colors.error.border}`,
+                  color: theme.colors.error.text,
+                }}
+              >
+                {deleteAppointmentMessage}
+              </div>
+            )}
+
+            <div className="mt-6 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeDeleteAppointmentModal}
+                disabled={appointmentDeleteBusy}
+                className="rounded-xl px-4 py-2 text-sm font-medium"
+                style={{ backgroundColor: withAlpha(theme.colors.secondary.beige, 0.7), color: theme.colors.secondary.charcoal }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteAppointment}
+                disabled={appointmentDeleteBusy}
+                className="rounded-xl px-4 py-2 text-sm font-semibold"
+                style={{
+                  backgroundColor: appointmentDeleteBusy ? withAlpha(theme.colors.error.text, 0.6) : theme.colors.error.text,
+                  color: theme.colors.gray[50],
+                }}
+              >
+                {appointmentDeleteBusy ? 'Deleting...' : 'Delete Appointment'}
+              </button>
+            </div>
           </div>
         </div>
       )}
