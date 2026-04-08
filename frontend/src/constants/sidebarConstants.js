@@ -9,7 +9,17 @@ export const navItems = [
 ];
 
 export const quickActions = [
-  { label: 'New Appointment', icon: CalendarIcon },
-  { label: 'Add Client Profile', icon: PlusIcon },
-  { label: 'View Payments', icon: PaymentsIcon },
+  {
+    label: 'New Appointment',
+    icon: CalendarIcon,
+    to: '/calendar',
+    state: { openCreateAppointmentModal: true },
+  },
+  {
+    label: 'Add Client Profile',
+    icon: PlusIcon,
+    to: '/clients',
+    state: { openCreateClientModal: true },
+  },
+  { label: 'View Payments', icon: PaymentsIcon, to: '/payments' },
 ];

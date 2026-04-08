@@ -338,7 +338,12 @@ export function Dashboard() {
                   const Icon = action.icon;
 
                   return (
-                    <button key={action.label} type="button" className="flex min-w-[120px] flex-col items-center gap-3">
+                    <Link
+                      key={action.label}
+                      to={action.to || '/dashboard'}
+                      state={action.state}
+                      className="flex min-w-[120px] flex-col items-center gap-3 no-underline"
+                    >
                       <div
                         className="flex h-16 w-16 items-center justify-center rounded-full transition-colors"
                         style={{
@@ -352,7 +357,7 @@ export function Dashboard() {
                       <span className="max-w-[100px] text-center text-sm font-medium leading-tight" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.72) }}>
                         {action.label}
                       </span>
-                    </button>
+                    </Link>
                   );
                 })}
               </div>

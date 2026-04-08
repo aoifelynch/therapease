@@ -5,7 +5,7 @@ export const register = async (req, res) => {
   const result = await authService.register(req.body);
 
   res.status(201).json({
-    message: "User created successfully",
+    message: "Account created successfully",
     user: result.user,
     accessToken: result.accessToken,
     refreshToken: result.refreshToken,

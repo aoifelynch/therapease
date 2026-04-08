@@ -36,6 +36,7 @@ export function ClientProfile() {
   const [showAllFiles, setShowAllFiles] = useState(false);
   const [viewingNote, setViewingNote] = useState(null);
   const [historySortOrder, setHistorySortOrder] = useState('newest');
+  const [showNoteSavedPopup, setShowNoteSavedPopup] = useState(false);
   const [showEditClientModal, setShowEditClientModal] = useState(false);
   const [editClientBusy, setEditClientBusy] = useState(false);
   const [editClientMessage, setEditClientMessage] = useState('');
@@ -310,6 +311,7 @@ export function ClientProfile() {
       } else {
         setIsNoteEditorOpen(false);
         setNoteStatusMessage('Note saved');
+        setShowNoteSavedPopup(true);
       }
     } catch (requestError) {
       setNoteStatusMessage(requestError.response?.data?.message || 'Unable to save note');
@@ -327,6 +329,7 @@ export function ClientProfile() {
     setNoteContent('');
     setIsNoteEditorOpen(true);
     setNoteStatusMessage('');
+    setShowNoteSavedPopup(false);
     lastSavedPayloadRef.current = '';
   };
 
@@ -334,6 +337,7 @@ export function ClientProfile() {
     setSelectedTemplate(template);
     setNoteContent(templateScaffolds[template]);
     setIsNoteEditorOpen(true);
+    setShowNoteSavedPopup(false);
   };
 
   const handleEditNote = (note) => {
@@ -345,6 +349,7 @@ export function ClientProfile() {
     setSelectedAppointmentId(note.appointment?.id || note.appointment?._id || note.appointment || '');
     setIsNoteEditorOpen(true);
     setNoteStatusMessage('');
+    setShowNoteSavedPopup(false);
 
     lastSavedPayloadRef.current = JSON.stringify({
       content: note.content || '',
@@ -583,6 +588,7 @@ export function ClientProfile() {
   const clientName = [client.firstName, client.lastName].filter(Boolean).join(' ') || 'Unnamed client';
   const emergencyContactName = client.emergencyContact?.name || '';
   const emergencyContactPhone = client.emergencyContact?.phone || '';
+  const emergencyContactAddress = client.emergencyContact?.address || '';
 
   const nextAppointment = appointments
     .filter((apt) => apt.status === 'upcoming')
@@ -720,7 +726,7 @@ export function ClientProfile() {
               </div>
 
               {/* Emergency Contact Card */}
-              {(emergencyContactName || emergencyContactPhone) && (
+              {(emergencyContactName || emergencyContactPhone || emergencyContactAddress) && (
                 <div
                   className="rounded-3xl p-6"
                   style={{
@@ -735,16 +741,26 @@ export function ClientProfile() {
                   >
                     Emergency Contact
                   </h3>
-                  {emergencyContactName && (
-                    <p className="text-base" style={{ color: theme.colors.secondary.charcoal }}>
-                      {emergencyContactName}
-                    </p>
-                  )}
-                  {emergencyContactPhone && (
-                    <p className="text-base" style={{ color: theme.colors.secondary.charcoal }}>
-                      {emergencyContactPhone}
-                    </p>
-                  )}
+                  <div className="space-y-3 text-sm">
+                    {emergencyContactName && (
+                      <div>
+                        <p style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6) }}>Name</p>
+                        <p className="text-base font-semibold">{emergencyContactName}</p>
+                      </div>
+                    )}
+                    {emergencyContactPhone && (
+                      <div>
+                        <p style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6) }}>Phone</p>
+                        <p className="text-base font-semibold">{emergencyContactPhone}</p>
+                      </div>
+                    )}
+                    {emergencyContactAddress && (
+                      <div>
+                        <p style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6) }}>Address</p>
+                        <p className="text-base font-semibold whitespace-pre-wrap">{emergencyContactAddress}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -791,7 +807,12 @@ export function ClientProfile() {
                     <button
                       key={tab.id}
                       type="button"
-                      onClick={() => setActiveTab(tab.id)}
+                      onClick={() => {
+                        setActiveTab(tab.id);
+                        if (tab.id === 'files') {
+                          setShowNoteSavedPopup(false);
+                        }
+                      }}
                       className="pb-3 text-sm font-medium transition-colors"
                       style={{
                         color: activeTab === tab.id ? theme.colors.secondary.charcoal : withAlpha(theme.colors.secondary.charcoal, 0.5),
@@ -802,6 +823,39 @@ export function ClientProfile() {
                     </button>
                   ))}
                 </div>
+
+                {showNoteSavedPopup && activeTab !== 'files' && (
+                  <div className="mb-5 rounded-2xl px-4 pb-3 pt-2" style={{ backgroundColor: withAlpha(theme.colors.secondary.sage, 0.55), border: `1px solid ${withAlpha(theme.colors.primary.DEFAULT, 0.3)}` }}>
+                    <div className="mb-1 h-0 w-0" style={{ borderLeft: '8px solid transparent', borderRight: '8px solid transparent', borderBottom: `10px solid ${withAlpha(theme.colors.secondary.sage, 0.55)}` }} />
+                    <p className="text-sm font-semibold" style={{ color: theme.colors.primary.darker }}>
+                      Your note is saved.
+                    </p>
+                    <p className="mt-1 text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.78) }}>
+                      You can view it under the Files tab.
+                    </p>
+                    <div className="mt-3 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveTab('files');
+                          setShowNoteSavedPopup(false);
+                        }}
+                        className="rounded-xl px-3 py-1.5 text-xs font-semibold"
+                        style={{ backgroundColor: theme.colors.primary.DEFAULT, color: theme.colors.gray[50] }}
+                      >
+                        Go to Files
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowNoteSavedPopup(false)}
+                        className="rounded-xl px-3 py-1.5 text-xs font-semibold"
+                        style={{ backgroundColor: withAlpha(theme.colors.secondary.beige, 0.75), color: theme.colors.secondary.charcoal }}
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Tab Content */}
                 {activeTab === 'notes' && (
@@ -1265,34 +1319,36 @@ export function ClientProfile() {
                     </button>
                   </div>
                 </div>
-                {orderedHistoryItems.length > 0 ? (
-                  <div className="space-y-4">
-                    {orderedHistoryItems.map((item, index) => (
-                      <div key={item.id} className="flex gap-3">
-                        <div className="flex flex-col items-center">
-                          <span
-                            className="mt-1 h-2.5 w-2.5 rounded-full"
-                            style={{ border: `2px solid ${theme.colors.secondary.charcoal}`, backgroundColor: theme.colors.gray[50] }}
-                          />
-                          {index < orderedHistoryItems.length - 1 && (
-                            <span className="mt-1 h-full w-px" style={{ backgroundColor: withAlpha(theme.colors.secondary.charcoal, 0.3), minHeight: '34px' }} />
-                          )}
+                <div className="max-h-[28rem] overflow-y-auto pr-1">
+                  {orderedHistoryItems.length > 0 ? (
+                    <div className="space-y-4">
+                      {orderedHistoryItems.map((item, index) => (
+                        <div key={item.id} className="flex gap-3">
+                          <div className="flex flex-col items-center">
+                            <span
+                              className="mt-1 h-2.5 w-2.5 rounded-full"
+                              style={{ border: `2px solid ${theme.colors.secondary.charcoal}`, backgroundColor: theme.colors.gray[50] }}
+                            />
+                            {index < orderedHistoryItems.length - 1 && (
+                              <span className="mt-1 h-full w-px" style={{ backgroundColor: withAlpha(theme.colors.secondary.charcoal, 0.3), minHeight: '34px' }} />
+                            )}
+                          </div>
+                          <div className="pb-2">
+                            <p className="text-sm font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
+                              {formatShortDate(item.date)}
+                            </p>
+                            <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.86) }}>{item.title}</p>
+                            <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.72) }}>{item.subtitle}</p>
+                          </div>
                         </div>
-                        <div className="pb-2">
-                          <p className="text-sm font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
-                            {formatShortDate(item.date)}
-                          </p>
-                          <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.86) }}>{item.title}</p>
-                          <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.72) }}>{item.subtitle}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.58) }}>
-                    No history yet.
-                  </p>
-                )}
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.58) }}>
+                      No history yet.
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </div>

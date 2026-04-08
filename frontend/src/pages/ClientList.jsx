@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { AppSidebar } from '../components/AppSidebar';
 import { appointmentsAPI, clientsAPI, remindersAPI } from '../api/api';
 import { useAuth } from '../context/AuthContext';
@@ -34,6 +34,7 @@ const formatAppointmentDate = (value) => {
 
 export function ClientList() {
 	const { user } = useAuth();
+	const location = useLocation();
 
 	const [activeNav, setActiveNav] = useState('Clients');
 	const [now, setNow] = useState(new Date());
@@ -323,6 +324,14 @@ export function ClientList() {
 
 		loadClientData();
 	}, []);
+
+	useEffect(() => {
+		if (!location.state?.openCreateClientModal) return;
+
+		setCreateMessage('');
+		resetCreateForm();
+		setShowCreateModal(true);
+	}, [location.state]);
 
 	const appointmentsByClient = useMemo(() => {
 		const groupedAppointments = {};

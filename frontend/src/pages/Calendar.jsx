@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -155,6 +155,7 @@ const renderCalendarEvent = (eventInfo) => {
 export function Calendar() {
   const { user } = useAuth();
   const calendarRef = useRef(null);
+  const location = useLocation();
   const [searchParams] = useSearchParams();
 
   const requestedViewParam = searchParams.get('view');
@@ -501,6 +502,14 @@ export function Calendar() {
     }
   }, [requestedViewParam]);
 
+  useEffect(() => {
+    if (!location.state?.openCreateAppointmentModal) return;
+
+    setCreateMessage('');
+    resetCreateForm();
+    setShowCreateModal(true);
+  }, [location.state]);
+
   const calendarEvents = useMemo(() => {
     const filteredAppointments = appointments
       .filter((appointment) => {
@@ -708,6 +717,24 @@ export function Calendar() {
                   <option value="online">Online</option>
                   <option value="in-person">In-Person</option>
                 </select>
+              </div>
+
+              <div className="ml-auto flex flex-wrap items-center gap-3 rounded-xl px-3 py-1.5" style={{ backgroundColor: withAlpha(theme.colors.gray[50], 0.88), border: `1px solid ${withAlpha(theme.colors.secondary.beige, 0.9)}` }}>
+                <span className="text-xs font-semibold uppercase tracking-[0.12em]" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.62) }}>
+                  Key
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: '#4869e8' }} />
+                  <span className="text-xs font-medium" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.82) }}>
+                    Online
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: '#ef7f1a' }} />
+                  <span className="text-xs font-medium" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.82) }}>
+                    In-person
+                  </span>
+                </div>
               </div>
             </div>
 
