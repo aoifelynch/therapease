@@ -18,6 +18,15 @@ export const Register = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
+  const getRegistrationErrorMessage = (err) => {
+    const apiMessage = err?.response?.data?.message || err?.response?.data?.error;
+    if (typeof apiMessage === 'string' && apiMessage.trim()) {
+      return apiMessage.trim();
+    }
+
+    return 'Unable to create account. Please check your details and try again.';
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -35,8 +44,12 @@ export const Register = () => {
       setError('Passwords do not match');
       return;
     }
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters and include a number and special character');
+      return;
+    }
+    if (!/(?=.*\d)(?=.*[^A-Za-z0-9])/.test(formData.password)) {
+      setError('Password must include a number and special character');
       return;
     }
 
@@ -44,9 +57,9 @@ export const Register = () => {
     try {
       const response = await authAPI.register(formData.email, formData.password, formData.name);
       login(response.user, response.accessToken, response.refreshToken);
-      navigate('/dashboard');
+      navigate('/setup-2fa');
     } catch (err) {
-      setError(err.message);
+      setError(getRegistrationErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -101,7 +114,7 @@ export const Register = () => {
           />
           <FloatingLabel
             id="password" name="password" type="password" label="Password"
-            placeholder="At least 6 characters"
+            placeholder="At least 8 characters, with a number and special character"
             value={formData.password} onChange={handleChange}
           />
           <FloatingLabel

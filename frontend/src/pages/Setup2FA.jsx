@@ -11,7 +11,7 @@ export const Setup2FA = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { logout, updateUser } = useAuth();
 
   const handleStartSetup = async () => {
     setError('');
@@ -41,7 +41,8 @@ export const Setup2FA = () => {
     setLoading(true);
 
     try {
-      await twoFactorAPI.verifySetup(code);
+      const response = await twoFactorAPI.verifySetup(code);
+      updateUser(response.user);
       navigate('/dashboard', { state: { success: '2FA has been enabled on your account!' } });
     } catch (err) {
       setError(err.message);
@@ -78,10 +79,10 @@ export const Setup2FA = () => {
               {loading ? 'Setting up...' : 'Get Started'}
             </button>
             <button
-              onClick={() => navigate('/dashboard')}
+              onClick={logout}
               className="btn btn-secondary w-full"
             >
-              Cancel
+              Log Out
             </button>
           </>
         )}

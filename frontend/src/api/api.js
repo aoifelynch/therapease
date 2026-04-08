@@ -148,7 +148,10 @@ api.interceptors.response.use(
 // Auth API
 export const authAPI = {
   async register(email, password, name) {
-    const response = await api.post('/auth/register', { email, password, name });
+    const response = await api.post('/auth/register', { email, password, name }, {
+      skipSuccessToast: true,
+      skipErrorToast: true,
+    });
     return response.data;
   },
 

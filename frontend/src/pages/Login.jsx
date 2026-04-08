@@ -30,6 +30,17 @@ export const Login = () => {
     setLoading(true);
     try {
       const response = await authAPI.login(formData.email, formData.password);
+
+      if (response.requires2FA) {
+        navigate('/2fa-verify', {
+          state: {
+            user: response.user,
+            tempUserId: response.tempUserId,
+          },
+        });
+        return;
+      }
+
       login(response.user, response.accessToken, response.refreshToken);
       navigate('/dashboard');
     } catch (err) {

@@ -30,7 +30,7 @@ function App() {
             <Route
               path="/setup-2fa"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowIncomplete2FA>
                   <Setup2FA />
                 </ProtectedRoute>
               }
@@ -75,7 +75,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </ToastProvider>
       </AuthProvider>
