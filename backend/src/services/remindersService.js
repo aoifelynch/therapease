@@ -123,7 +123,7 @@ export default {
           type: 'missing-notes',
           status: 'pending',
           missingNotesCount,
-          description: `has ${missingNotesCount} completed session${missingNotesCount === 1 ? '' : 's'} without notes.`,
+          description: `missing notes for ${missingNotesCount} completed session${missingNotesCount === 1 ? '' : 's'}.`,
         });
       }
     });

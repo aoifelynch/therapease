@@ -367,7 +367,9 @@ export const todosAPI = {
   },
 
   async update(todoId, todoData) {
-    const response = await api.patch(`/todos/${todoId}`, todoData);
+    const response = await api.patch(`/todos/${todoId}`, todoData, {
+      skipSuccessToast: true,
+    });
     return response.data;
   },
 

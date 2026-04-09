@@ -88,11 +88,13 @@ export function Dashboard() {
       return appointmentEndTime ? appointmentEndTime > now : false;
     })
     .sort((first, second) => {
-      const firstEnd = toAppointmentDateTime(first, first.endTime)?.getTime() ?? Number.MAX_SAFE_INTEGER;
-      const secondEnd = toAppointmentDateTime(second, second.endTime)?.getTime() ?? Number.MAX_SAFE_INTEGER;
-      return firstEnd - secondEnd;
+      const firstStart = toAppointmentDateTime(first, first.startTime)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      const secondStart = toAppointmentDateTime(second, second.startTime)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      return firstStart - secondStart;
     })
-    .slice(0, 5);
+    .slice(0, 50);
+  const dashboardUpcomingAppointments = upcomingAppointments.slice(0, 3);
+  const hasMoreUpcomingAppointments = upcomingAppointments.length > dashboardUpcomingAppointments.length;
   const pendingPayments = payments.filter((payment) => payment.status === 'pending');
   const paidPayments = payments.filter((payment) => payment.status === 'paid');
   const pendingTodos = todos.filter((todo) => !todo.completed);
@@ -305,6 +307,22 @@ export function Dashboard() {
     }
   };
 
+  const handleDeleteAppointmentFromDashboard = async (appointmentId) => {
+    if (!appointmentId) return;
+
+    const shouldDelete = window.confirm('Delete this appointment? This cannot be undone.');
+    if (!shouldDelete) return;
+
+    setError('');
+
+    try {
+      await appointmentsAPI.delete(appointmentId);
+      setAppointments((current) => current.filter((item) => String(item.id || item._id) !== String(appointmentId)));
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || requestError.message || 'Unable to delete appointment');
+    }
+  };
+
   // Render
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: theme.colors.secondary.cream, color: theme.colors.secondary.charcoal, fontFamily: theme.fonts.sans }}>
@@ -312,7 +330,43 @@ export function Dashboard() {
 
       {/* Main content area */}
       <main className="h-screen flex-1 overflow-y-auto">
-        <PageHeader userName={user?.name} now={now} />
+        <PageHeader
+          userName={user?.name}
+          now={now}
+          actions={(
+            <div className="flex flex-wrap justify-end gap-2.5">
+              {quickActions.map((action) => {
+                const Icon = action.icon;
+                const compactLabel = action.label === 'Add Client Profile' ? 'Add Client' : action.label;
+                const isPrimaryAction = action.label === 'New Appointment';
+
+                return (
+                  <Link
+                    key={action.label}
+                    to={action.to || '/dashboard'}
+                    state={action.state}
+                    className="inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold no-underline transition-opacity hover:opacity-90"
+                    style={isPrimaryAction
+                      ? {
+                        backgroundColor: theme.colors.primary.DEFAULT,
+                        color: theme.colors.gray[50],
+                      }
+                      : {
+                        backgroundColor: withAlpha(theme.colors.secondary.sage, 0.72),
+                        color: theme.colors.secondary.charcoal,
+                        border: `1px solid ${withAlpha(theme.colors.primary.light, 0.55)}`,
+                      }}
+                  >
+                    <span className="inline-flex h-4.5 w-4.5 items-center justify-center">
+                      <Icon />
+                    </span>
+                    {compactLabel}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        />
 
         <div className="space-y-6 px-6 py-6 md:px-8">
           {/* Error alert */}
@@ -325,150 +379,109 @@ export function Dashboard() {
             ))}
           </section>
 
-          {/* Quick Actions & Reminders */}
-          <section className="grid gap-4 xl:grid-cols-2">
-            {/* Quick Actions */}
-            <SectionCard title="Quick Actions">
-              <div className="flex flex-wrap justify-around gap-5">
-                {quickActions.map((action) => {
-                  const Icon = action.icon;
-
-                  return (
-                    <Link
-                      key={action.label}
-                      to={action.to || '/dashboard'}
-                      state={action.state}
-                      className="flex min-w-[120px] flex-col items-center gap-3 no-underline"
-                    >
-                      <div
-                        className="flex h-16 w-16 items-center justify-center rounded-full transition-colors"
-                        style={{
-                          backgroundColor: theme.colors.primary.DEFAULT,
-                          color: theme.colors.gray[50],
-                          boxShadow: `0 10px 18px ${withAlpha(theme.colors.primary.dark, 0.25)}`,
-                        }}
-                      >
-                        <Icon />
-                      </div>
-                      <span className="max-w-[100px] text-center text-sm font-medium leading-tight" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.72) }}>
-                        {action.label}
-                      </span>
-                    </Link>
-                  );
-                })}
-              </div>
-            </SectionCard>
-
-            {/* Reminders */}
-            <SectionCard
-              title="Reminders"
-              action={(
-                <span className="text-xs font-medium uppercase tracking-[0.16em]" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.5) }}>
-                  {allReminders.length} total
-                </span>
-              )}
-              className="scroll-mt-6"
-              bodyClassName="space-y-3"
-            >
-
-              {(loading ? [] : prioritizedRemindersByClient.slice(0, 6)).map((reminderGroup) => {
-                  const tone = componentStyles.getReminderTone(reminderGroup.status);
-                  const reminderClient = clientLookup[reminderGroup.client] || 'Practice reminder';
-                  const isFocusedReminder = Boolean(
-                    (focusedClientId ? reminderGroup.client === focusedClientId : true)
-                    && (focusedReminderType ? reminderGroup.type === focusedReminderType : true)
-                    && (focusedClientId || focusedReminderType),
-                  );
-
-                  return (
-                    <Link
-                      to={`/clients/${reminderGroup.client}`}
-                      key={reminderGroup.client}
-                      className="flex items-start gap-3 rounded-2xl px-3 py-3 no-underline transition-opacity hover:opacity-80"
-                      style={{
-                        backgroundColor: tone.background,
-                        border: isFocusedReminder ? `1px solid ${withAlpha(theme.colors.primary.DEFAULT, 0.55)}` : '1px solid transparent',
-                      }}
-                    >
-                      <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: tone.dot }} />
-                      <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.82) }}>
-                        <span className="font-semibold" style={{ color: theme.colors.secondary.charcoal }}>{reminderClient}</span>{' '}
-                        is {reminderGroup.description}{reminderGroup.count > 1 ? ' (and more)' : ''}.
-                      </p>
-                    </Link>
-                  );
-                })}
-
-                {!loading && allReminders.length === 0 && (
-                  <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.58) }}>
-                    No reminders yet.
-                  </p>
-                )}
-            </SectionCard>
-          </section>
-
           {/* Appointments & Revenue */}
-          <section className="grid gap-4 xl:grid-cols-[2fr_1fr]">
+          <section className="grid gap-4 xl:grid-cols-[2.5fr_0.9fr]">
             {/* Appointments Table */}
-            <SectionCard title="Upcoming Appointments" bodyClassName="space-y-0">
-              <p className="mb-6 text-xs" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.5) }}>
-                {formatLongDate(now)}
-              </p>
-
+            <SectionCard title="Today's Upcoming Appointments" bodyClassName="space-y-0">
               <AppDataTable
+                tableClassName="text-[0.95rem]"
+                headerCellClassName="text-[0.8rem]"
                 columns={[
-                  { key: 'time', label: 'Time', widthClassName: 'w-[16%]', headerClassName: 'pl-4 pr-3' },
-                  { key: 'client', label: 'Client', widthClassName: 'w-[26%]' },
-                  { key: 'location', label: 'Location', widthClassName: 'w-[24%]' },
+                  { key: 'time', label: 'Time', widthClassName: 'w-[15%]', headerClassName: 'pl-4 pr-3' },
+                  { key: 'client', label: 'Client', widthClassName: 'w-[26%]', headerClassName: 'pl-2 pr-2' },
+                  { key: 'location', label: 'Location', widthClassName: 'w-[24%]', headerClassName: '!px-2' },
                   { key: 'status', label: 'Status', widthClassName: 'w-[18%]' },
-                  { key: 'action', label: 'Action', widthClassName: 'w-[16%]', headerClassName: 'pl-3 pr-4' },
+                  { key: 'action', label: 'Action', widthClassName: 'w-[17%]', headerClassName: 'pl-2 pr-4' },
                 ]}
-                rows={upcomingAppointments}
+                rows={dashboardUpcomingAppointments}
                 rowKey={(appointment) => appointment._id || appointment.id}
                 renderRow={(appointment) => {
                   const tone = componentStyles.getStatusTone(appointment.status);
                   const hasZoom = appointment.type === 'online' && appointment.zoomLink;
+                  const appointmentId = appointment._id || appointment.id;
+                  const appointmentClient = typeof appointment.client === 'object' && appointment.client ? appointment.client : null;
+                  const appointmentClientId = appointmentClient?.id || appointmentClient?._id || (typeof appointment.client === 'string' ? appointment.client : '');
+                  const clientName = getClientName(appointment.client);
 
                   return (
                     <>
-                      <td className="py-3 pl-4 font-medium" style={{ color: theme.colors.secondary.charcoal }}>{formatTime(appointment)}</td>
-                      <td className="py-3">{getClientName(appointment.client)}</td>
-                      <td className="py-3">{appointment.type === 'online' ? 'Online' : 'In-person'}</td>
-                      <td className="py-3">
+                      <td className="py-3 pl-4 pr-3 font-medium" style={{ color: theme.colors.secondary.charcoal }}>{formatTime(appointment)}</td>
+                      <td className="px-2 py-3">
+                        {appointmentClientId ? (
+                          <Link
+                            to={`/clients/${appointmentClientId}`}
+                            className="font-medium transition-opacity hover:opacity-70 no-underline"
+                            style={{ color: theme.colors.secondary.charcoal }}
+                          >
+                            {clientName}
+                          </Link>
+                        ) : (
+                          <span className="font-medium" style={{ color: theme.colors.secondary.charcoal }}>{clientName}</span>
+                        )}
+                      </td>
+                      <td className="!px-2 py-3">{appointment.type === 'online' ? 'Online' : 'In-person'}</td>
+                      <td className="px-2 py-3">
                         <span className="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize" style={{ backgroundColor: tone.background, color: tone.color }}>
                           {appointment.status}
                         </span>
                       </td>
                       <td className="py-3 pr-4">
-                        {hasZoom ? (
-                          <a
-                            href={appointment.zoomLink}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-semibold"
-                            style={{ backgroundColor: withAlpha(theme.colors.primary.DEFAULT, 0.16), color: theme.colors.primary.darker }}
-                          >
-                            <ExternalLinkIcon />
-                            Join Zoom
-                          </a>
-                        ) : (
+                        <div className="flex items-center justify-start gap-1.5">
                           <button
                             type="button"
-                            className="inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-semibold"
-                            style={{ backgroundColor: withAlpha(theme.colors.secondary.beige, 0.65), color: theme.colors.secondary.charcoal }}
+                            onClick={() => handleDeleteAppointmentFromDashboard(appointmentId)}
+                            className="inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-semibold"
+                            style={{ backgroundColor: withAlpha(theme.colors.error.bg, 0.92), color: theme.colors.error.text }}
                           >
-                            <EditIcon />
-                            View
+                            <TrashIcon />
+                            Delete
                           </button>
-                        )}
+
+                          {hasZoom ? (
+                            <a
+                              href={appointment.zoomLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-semibold"
+                              style={{ backgroundColor: withAlpha(theme.colors.primary.DEFAULT, 0.16), color: theme.colors.primary.darker }}
+                            >
+                              <ExternalLinkIcon />
+                              Join Zoom
+                            </a>
+                          ) : (
+                            <button
+                              type="button"
+                              className="inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-semibold"
+                              style={{ backgroundColor: withAlpha(theme.colors.secondary.beige, 0.65), color: theme.colors.secondary.charcoal }}
+                            >
+                              <EditIcon />
+                              View
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </>
                   );
                 }}
                 loading={loading}
                 loadingMessage="Loading appointments..."
-                emptyMessage="No appointments scheduled yet."
+                emptyMessage="Your schedule is clear today, take a moment for yourself!"
+                loadingCellClassName="px-4 py-4 text-sm"
+                emptyCellClassName="px-4 py-4 text-sm"
               />
+
+              {!loading && hasMoreUpcomingAppointments && (
+                <div className="mt-3 flex justify-end">
+                  <Link
+                    to={`/calendar?view=timeGridWeek&date=${now.toISOString().slice(0, 10)}`}
+                    className="inline-flex items-center gap-1 text-xs font-semibold no-underline transition-opacity hover:opacity-80"
+                    style={{ color: theme.colors.primary.darker }}
+                  >
+                    View all
+                    <span aria-hidden="true">→</span>
+                  </Link>
+                </div>
+              )}
             </SectionCard>
 
             {/* Revenue Overview */}
@@ -494,8 +507,56 @@ export function Dashboard() {
             </SectionCard>
           </section>
 
-          {/* Todos & Unpaid Sessions */}
+          {/* Reminders & To-Do */}
           <section className="grid gap-4 xl:grid-cols-2">
+            {/* Reminders */}
+            <SectionCard
+              title="Reminders"
+              action={(
+                <span className="text-xs font-medium uppercase tracking-[0.16em]" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.5) }}>
+                  {allReminders.length} total
+                </span>
+              )}
+              className="scroll-mt-6"
+              bodyClassName="space-y-1.5"
+            >
+
+              {(loading ? [] : prioritizedRemindersByClient.slice(0, 6)).map((reminderGroup) => {
+                  const tone = componentStyles.getReminderTone(reminderGroup.status);
+                  const reminderClient = clientLookup[reminderGroup.client] || 'Practice reminder';
+                  const isFocusedReminder = Boolean(
+                    (focusedClientId ? reminderGroup.client === focusedClientId : true)
+                    && (focusedReminderType ? reminderGroup.type === focusedReminderType : true)
+                    && (focusedClientId || focusedReminderType),
+                  );
+
+                  return (
+                    <Link
+                      to={`/clients/${reminderGroup.client}`}
+                      state={{ openEditClientModal: true }}
+                      key={reminderGroup.client}
+                      className="group flex items-start gap-2.5 rounded-xl px-2.5 py-1.5 no-underline transition-opacity hover:opacity-80"
+                      style={{
+                        backgroundColor: withAlpha(theme.colors.gray[50], 0.88),
+                        border: '1px solid transparent',
+                      }}
+                    >
+                      <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: tone.dot }} />
+                      <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.82) }}>
+                        <span className="font-semibold underline-offset-2 group-hover:underline" style={{ color: theme.colors.secondary.charcoal }}>{reminderClient}</span>{' '}
+                        is {reminderGroup.description}{reminderGroup.count > 1 ? ' (and more)' : ''}.
+                      </p>
+                    </Link>
+                  );
+                })}
+
+                {!loading && allReminders.length === 0 && (
+                  <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.58) }}>
+                    No reminders, you're on top of your session notes and client details!
+                  </p>
+                )}
+            </SectionCard>
+
             {/* To-Do List */}
             <SectionCard title="To-Do List">
 
@@ -526,15 +587,17 @@ export function Dashboard() {
                 </button>
               </form>
 
-              <div className="space-y-3">
-                {(loading ? [] : todos.slice(0, 8)).map((todo) => (
-                  <div key={todo.id || todo._id} className="flex items-start gap-3 rounded-2xl px-2 py-2 transition-colors" style={{ backgroundColor: todo.completed ? withAlpha(theme.colors.secondary.sage, 0.55) : 'transparent' }}>
+              <div
+                className={`space-y-2 ${!loading && todos.length > 7 ? 'max-h-[22rem] overflow-y-auto pr-1' : ''}`}
+              >
+                {(loading ? [] : todos).map((todo) => (
+                  <div key={todo.id || todo._id} className="flex items-center gap-2 rounded-xl px-2 py-1.5 transition-colors" style={{ backgroundColor: todo.completed ? withAlpha(theme.colors.secondary.sage, 0.55) : 'transparent' }}>
                     <button
                       type="button"
                       aria-label={todo.completed ? 'Mark task incomplete' : 'Mark task complete'}
                       onClick={() => handleToggleTodo(todo)}
                       disabled={todoBusyId === (todo.id || todo._id)}
-                      className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md"
+                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md"
                       style={{
                         border: `1.5px solid ${todo.completed ? theme.colors.primary.dark : theme.colors.primary.DEFAULT}`,
                         color: theme.colors.gray[50],
@@ -544,7 +607,7 @@ export function Dashboard() {
                     >
                       {todo.completed && <CheckIcon />}
                     </button>
-                    <p className="flex-1 text-sm" style={{ color: todo.completed ? withAlpha(theme.colors.secondary.charcoal, 0.45) : withAlpha(theme.colors.secondary.charcoal, 0.8), textDecoration: todo.completed ? 'line-through' : 'none' }}>
+                    <p className="flex-1 text-sm leading-tight" style={{ color: todo.completed ? withAlpha(theme.colors.secondary.charcoal, 0.45) : withAlpha(theme.colors.secondary.charcoal, 0.8), textDecoration: todo.completed ? 'line-through' : 'none' }}>
                       {todo.title}
                     </p>
                     <button
@@ -552,7 +615,7 @@ export function Dashboard() {
                       aria-label="Delete task"
                       onClick={() => handleDeleteTodo(todo.id || todo._id)}
                       disabled={todoBusyId === (todo.id || todo._id)}
-                      className="rounded-xl p-2"
+                      className="ml-auto rounded-lg p-1.5"
                       style={{
                         color: withAlpha(theme.colors.secondary.charcoal, 0.55),
                         backgroundColor: withAlpha(theme.colors.secondary.beige, 0.45),
@@ -571,31 +634,6 @@ export function Dashboard() {
                 )}
               </div>
             </SectionCard>
-
-            {/* Unpaid Sessions */}
-            <SectionCard title="Unpaid Sessions">
-              <div className="space-y-3">
-                {(loading ? [] : pendingPayments.slice(0, 5)).map((payment) => {
-                  const appointmentClient = payment.appointment?.client;
-
-                  return (
-                    <div key={payment._id || payment.id} className="flex items-start gap-3 rounded-2xl px-3 py-3" style={{ backgroundColor: withAlpha(theme.colors.error.bg, 0.6) }}>
-                      <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: theme.colors.error.text }} />
-                      <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.82) }}>
-                        <span className="font-semibold" style={{ color: theme.colors.secondary.charcoal }}>{getClientName(appointmentClient)}</span>{' '}
-                        outstanding for {formatCurrency(payment.amount)}
-                      </p>
-                    </div>
-                  );
-                })}
-
-                {!loading && pendingPayments.length === 0 && (
-                  <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.58) }}>
-                    No outstanding payments.
-                  </p>
-                )}
-              </div>
-            </SectionCard>
           </section>
         </div>
 
@@ -608,6 +646,7 @@ export function Dashboard() {
           onConfirm={handleConfirmDeleteTodo}
           isBusy={deleteTodoBusy}
           confirmLabel="Delete Task"
+          overlayStyle={{ backgroundColor: 'rgba(18, 24, 28, 0.42)' }}
         />
       </main>
     </div>

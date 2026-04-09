@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { AppSidebar } from '../components/AppSidebar';
 import { PageHeader } from '../components/PageHeader';
 import { ErrorAlert } from '../components/ErrorAlert';
@@ -17,6 +17,7 @@ import { BackIcon, EditIcon, TrashIcon } from '../utils/icons';
 export function ClientProfile() {
   const { clientId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
 
   const [activeNav, setActiveNav] = useState('Clients');
@@ -115,6 +116,13 @@ export function ClientProfile() {
     setFileToDelete(null);
     setDeleteFileMessage('');
   };
+
+  useEffect(() => {
+    if (!location.state?.openEditClientModal || !client || loading) return;
+
+    openEditClientModal();
+    navigate(location.pathname, { replace: true, state: null });
+  }, [client, loading, location.pathname, location.state, navigate]);
 
   const handleSaveClientDetails = async (event) => {
     event.preventDefault();
@@ -684,7 +692,7 @@ export function ClientProfile() {
                   )}
                 </div>
 
-                <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="mt65 pt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <button
                     type="button"
                     onClick={openEditClientModal}
@@ -741,14 +749,17 @@ export function ClientProfile() {
 
               {/* Next Appointment Card */}
               {nextAppointment && (
-                <SectionCard title="Next Appointment" className="rounded-3xl" bodyClassName="space-y-0">
-                  <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.7) }}>
-                    {new Intl.DateTimeFormat('en-IE', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date(nextAppointment.date))}
-                  </p>
-                  <p className="font-medium">
-                    {nextAppointment.startTime} - {nextAppointment.endTime}
-                  </p>
-                  <p className="text-sm">{nextAppointment.type === 'online' ? 'Online' : 'In-person'}</p>
+                <SectionCard title="Next Appointment" className="rounded-3xl" bodyClassName="-mt-2 space-y-0">
+                  <div className="space-y-0.5 ">
+                    <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.7) }}>
+                      {new Intl.DateTimeFormat('en-IE', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date(nextAppointment.date))}
+                    </p>
+                    <p className="font-medium">
+                      {nextAppointment.startTime} - {nextAppointment.endTime}
+                    </p>
+                    <p className="text-sm">{nextAppointment.type === 'online' ? 'Online' : 'In-person'}</p>
+                  </div>
+                  <div aria-hidden="true" className="h-2" />
                   <button
                     type="button"
                     onClick={() => {
@@ -758,7 +769,7 @@ export function ClientProfile() {
 
                       navigate(`/calendar?view=timeGridWeek&date=${dateParam}`);
                     }}
-                    className="mt-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
+                    className="block rounded-lg px-3 py-2 text-sm font-medium transition-colors"
                     style={{ backgroundColor: withAlpha(theme.colors.primary.DEFAULT, 0.16), color: theme.colors.primary.darker }}
                   >
                     View in Calendar

@@ -295,17 +295,11 @@ export function Payments() {
 							<div className="flex flex-wrap gap-2">
 								<button
 									type="button"
-									className="rounded-xl px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-90"
-									style={{ backgroundColor: theme.colors.primary.DEFAULT, color: theme.colors.gray[50] }}
+									className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-90"
+									style={{ backgroundColor: theme.colors.primary.light, color: theme.colors.gray[50] }}
 								>
+									<span aria-hidden="true" className="text-base leading-none">+</span>
 									Create Payment Link
-								</button>
-								<button
-									type="button"
-									className="rounded-xl px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-90"
-									style={{ backgroundColor: withAlpha(theme.colors.primary.DEFAULT, 0.82), color: theme.colors.gray[50] }}
-								>
-									Create Invoice
 								</button>
 							</div>
 						)}

@@ -14,7 +14,7 @@ import { useAuth } from '../context/AuthContext';
 import { theme } from '../utils/theme';
 import { withAlpha } from '../utils/formatters';
 import { componentStyles } from '../utils/componentStyles';
-import { EditIcon, TrashIcon, PlusIcon } from '../utils/icons';
+import { EditIcon, TrashIcon } from '../utils/icons';
 
 const getAppointmentDateTime = (appointment) => {
 	if (!appointment?.date) return null;
@@ -503,14 +503,14 @@ export function ClientList() {
 							<button
 								type="button"
 								onClick={() => setShowCreateModal(true)}
-								className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors"
+								className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-90"
 								style={{
 									backgroundColor: theme.colors.primary.light,
 									color: theme.colors.gray[50],
 								}}
 							>
-								<PlusIcon />
-								Add Client
+								<span aria-hidden="true" className="text-base leading-none">+</span>
+								Add Client Profile
 							</button>
 						)}
 					/>

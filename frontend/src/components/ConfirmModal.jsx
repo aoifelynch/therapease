@@ -14,6 +14,7 @@ export const ConfirmModal = ({
   cancelLabel = 'Cancel',
   children,
   maxWidthClass = 'max-w-md',
+  overlayStyle,
 }) => {
   return (
     <ModalShell
@@ -22,7 +23,7 @@ export const ConfirmModal = ({
       onClose={onCancel}
       closeDisabled={isBusy}
       maxWidthClass={maxWidthClass}
-      overlayStyle={{ backgroundColor: withAlpha(theme.colors.secondary.charcoal, 0.4) }}
+      overlayStyle={overlayStyle || { backgroundColor: withAlpha(theme.colors.secondary.charcoal, 0.4) }}
       showClose={false}
     >
         {description && (

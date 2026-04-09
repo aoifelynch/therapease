@@ -619,13 +619,13 @@ export function Calendar() {
                   resetCreateForm();
                   setShowCreateModal(true);
                 }}
-                className="rounded-2xl px-5 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90"
+                className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-90"
                 style={{
                   backgroundColor: theme.colors.primary.light,
                   color: theme.colors.gray[50],
-                  boxShadow: `0 12px 20px ${withAlpha(theme.colors.primary.dark, 0.25)}`,
                 }}
               >
+                <span aria-hidden="true" className="text-base leading-none">+</span>
                 Create Appointment
               </button>
             )}
@@ -758,7 +758,7 @@ export function Calendar() {
                 height="auto"
                 expandRows={false}
                 slotMinTime="08:00:00"
-                slotMaxTime="21:00:00"
+                slotMaxTime="22:00:00"
                 slotDuration="00:30:00"
                 snapDuration="00:15:00"
                 slotLabelInterval="01:00"
