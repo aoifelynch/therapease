@@ -1,10 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AppSidebar } from '../components/AppSidebar';
+import { PageHeader } from '../components/PageHeader';
+import { PageTitleRow } from '../components/PageTitleRow';
+import { ErrorAlert } from '../components/ErrorAlert';
+import { FormModal } from '../components/FormModal';
+import { ConfirmModal } from '../components/ConfirmModal';
+import { useLiveNow } from '../hooks/useLiveNow';
+import { SectionCard } from '../components/SectionCard';
+import { AppDataTable } from '../components/AppDataTable';
 import { appointmentsAPI, clientsAPI, remindersAPI } from '../api/api';
 import { useAuth } from '../context/AuthContext';
 import { theme } from '../utils/theme';
-import { withAlpha, formatLongDate, formatClock } from '../utils/formatters';
+import { withAlpha } from '../utils/formatters';
 import { componentStyles } from '../utils/componentStyles';
 import { EditIcon, TrashIcon, PlusIcon } from '../utils/icons';
 
@@ -37,7 +45,7 @@ export function ClientList() {
 	const location = useLocation();
 
 	const [activeNav, setActiveNav] = useState('Clients');
-	const [now, setNow] = useState(new Date());
+	const now = useLiveNow();
 	const [clients, setClients] = useState([]);
 	const [appointments, setAppointments] = useState([]);
 	const [reminderIssues, setReminderIssues] = useState([]);
@@ -296,11 +304,6 @@ export function ClientList() {
 	};
 
 	useEffect(() => {
-		const timer = window.setInterval(() => setNow(new Date()), 60000);
-		return () => window.clearInterval(timer);
-	}, []);
-
-	useEffect(() => {
 		const loadClientData = async () => {
 			setLoading(true);
 			setError('');
@@ -491,33 +494,12 @@ export function ClientList() {
 			<AppSidebar activeNav={activeNav} onNavSelect={setActiveNav} user={user} />
 
 			<main className="h-screen flex-1 overflow-y-auto">
-				<header
-					className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 px-6 py-4 md:px-8"
-					style={{
-						backgroundColor: withAlpha(theme.colors.gray[50], 0.92),
-						backdropFilter: 'blur(12px)',
-						borderBottom: `1px solid ${withAlpha(theme.colors.secondary.beige, 0.9)}`,
-					}}
-				>
-					<h1 className="text-xl font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
-						Welcome, {user?.name?.split(' ')[0] || '!'}
-					</h1>
-					<span className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6) }}>
-						{formatLongDate(now)} {formatClock(now)}
-					</span>
-				</header>
+				<PageHeader userName={user?.name} now={now} />
 
-				<div className="space-y-5 px-6 py-6 md:px-8">
-					{error && (
-						<div className="rounded-2xl px-4 py-3 text-sm" style={{ backgroundColor: theme.colors.error.bg, color: theme.colors.error.text, border: `1px solid ${theme.colors.error.border}` }}>
-							{error}
-						</div>
-					)}
-
-					<section className="rounded-3xl p-5 md:p-6" style={componentStyles.card}>
-						<div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-							<h2 className="text-3xl font-semibold" style={componentStyles.sectionTitle}>Client List</h2>
-
+				<div className="space-y-6 px-6 py-6 md:px-8">
+					<PageTitleRow
+						title="Client List"
+						actions={(
 							<button
 								type="button"
 								onClick={() => setShowCreateModal(true)}
@@ -530,8 +512,12 @@ export function ClientList() {
 								<PlusIcon />
 								Add Client
 							</button>
-						</div>
+						)}
+					/>
 
+					<ErrorAlert message={error} />
+
+					<SectionCard paddingClassName="p-5 md:p-6" bodyClassName="space-y-0">
 						<div className="mb-4 flex flex-wrap items-start justify-between gap-3">
 							<label className="relative block w-full max-w-md">
 								<span className="sr-only">Search clients</span>
@@ -618,127 +604,94 @@ export function ClientList() {
 						</div>
 
 						<div className="overflow-hidden rounded-2xl border" style={{ borderColor: componentStyles.subtleBorder }}>
-							<div className="overflow-x-auto">
-								<table className="w-full table-fixed text-left text-sm">
-									<thead style={{ backgroundColor: withAlpha(theme.colors.secondary.beige, 0.5), color: withAlpha(theme.colors.secondary.charcoal, 0.8) }}>
-										<tr>
-											<th className="w-[18%] px-4 py-3 font-semibold">Name</th>
-											<th className="w-[20%] px-3 py-3 font-semibold">Email</th>
-											<th className="w-[12%] px-3 py-3 font-semibold">Phone</th>
-											<th className="w-[10%] px-4 py-3 font-semibold">Status</th>
-											<th className="w-[15%] px-4 py-3 font-semibold">Next Appointment</th>
-											<th className="w-[17%] px-4 py-3 font-semibold">Actions Needed</th>
-											<th className="w-[6%] py-3 pl-2 pr-4 text-right font-semibold">Actions</th>
-										</tr>
-									</thead>
-									<tbody style={{ backgroundColor: theme.colors.gray[50] }}>
-										{!loading && rows.map((row, index) => (
-											<tr key={row.clientId} style={{ backgroundColor: componentStyles.getZebraRow(index) }}>
-												<td className="border-t px-4 py-3" style={{ borderColor: componentStyles.subtleBorder }}>
-													<Link
-														to={`/clients/${row.clientId}`}
-														className="font-medium transition-opacity hover:opacity-70"
-														style={{ color: theme.colors.secondary.charcoal, textDecoration: 'none' }}
-													>
-														{row.name}
-													</Link>
-												</td>
-												<td className="border-t px-3 py-3" style={{ borderColor: componentStyles.subtleBorder }}>{row.email || '-'}</td>
-												<td className="border-t px-3 py-3" style={{ borderColor: componentStyles.subtleBorder }}>{row.phone || '-'}</td>
-												<td className="border-t px-4 py-3" style={{ borderColor: componentStyles.subtleBorder }}>
-													<span
-														className="inline-flex rounded-md px-2 py-0.5 text-xs font-semibold capitalize"
-														style={{
-															backgroundColor: row.status === 'active' ? withAlpha(theme.colors.secondary.sage, 0.95) : withAlpha(theme.colors.secondary.beige, 0.7),
-															color: row.status === 'active' ? theme.colors.primary.darker : withAlpha(theme.colors.secondary.charcoal, 0.75),
-														}}
-													>
-														{row.status}
-													</span>
-												</td>
-												<td className="border-t px-4 py-3" style={{ borderColor: componentStyles.subtleBorder }}>
-													{row.nextAppointment ? formatAppointmentDate(row.nextAppointment.dateTime) : 'Not Scheduled'}
-												</td>
-												<td
-													className="border-t px-4 py-3 whitespace-nowrap overflow-hidden text-ellipsis"
-													title={row.actionsNeededDetails || row.actionsNeededLabel}
-													style={{ borderColor: componentStyles.subtleBorder, color: withAlpha(theme.colors.primary.darker, 0.78) }}
+							<AppDataTable
+								columns={[
+									{ key: 'name', label: 'Name', widthClassName: 'w-[18%]', headerClassName: 'px-4' },
+									{ key: 'email', label: 'Email', widthClassName: 'w-[20%]' },
+									{ key: 'phone', label: 'Phone', widthClassName: 'w-[12%]' },
+									{ key: 'status', label: 'Status', widthClassName: 'w-[10%]' },
+									{ key: 'nextAppointment', label: 'Next Appointment', widthClassName: 'w-[15%]' },
+									{ key: 'actionsNeeded', label: 'Actions Needed', widthClassName: 'w-[17%]' },
+									{ key: 'actions', label: 'Actions', widthClassName: 'w-[8%]', headerClassName: 'pl-2 pr-4 text-right' },
+								]}
+								rows={rows}
+								rowKey={(row) => row.clientId}
+								renderRow={(row) => (
+									<>
+										<td className="px-4 py-3">
+											<Link
+												to={`/clients/${row.clientId}`}
+												className="font-medium transition-opacity hover:opacity-70"
+												style={{ color: theme.colors.secondary.charcoal, textDecoration: 'none' }}
+											>
+												{row.name}
+											</Link>
+										</td>
+										<td className="px-3 py-3">{row.email || '-'}</td>
+										<td className="px-3 py-3">{row.phone || '-'}</td>
+										<td className="px-4 py-3">
+											<span
+												className="inline-flex rounded-md px-2 py-0.5 text-xs font-semibold capitalize"
+												style={{
+													backgroundColor: row.status === 'active' ? withAlpha(theme.colors.secondary.sage, 0.95) : withAlpha(theme.colors.secondary.beige, 0.7),
+													color: row.status === 'active' ? theme.colors.primary.darker : withAlpha(theme.colors.secondary.charcoal, 0.75),
+												}}
+											>
+												{row.status}
+											</span>
+										</td>
+										<td className="px-4 py-3">{row.nextAppointment ? formatAppointmentDate(row.nextAppointment.dateTime) : 'Not Scheduled'}</td>
+										<td
+											className="px-4 py-3 whitespace-nowrap overflow-hidden text-ellipsis"
+											title={row.actionsNeededDetails || row.actionsNeededLabel}
+											style={{ color: withAlpha(theme.colors.primary.darker, 0.78) }}
+										>
+											{row.actionsNeededLabel}
+										</td>
+										<td className="py-3 pl-2 pr-4">
+											<div className="flex items-center justify-end gap-2">
+												<button
+													type="button"
+													onClick={() => openEditModal(row)}
+													aria-label={`Edit ${row.name}`}
+													title={`Edit ${row.name}`}
 												>
-													{row.actionsNeededLabel}
-												</td>
-												<td className="border-t py-3 pl-2 pr-4" style={{ borderColor: componentStyles.subtleBorder }}>
-													<div className="flex items-center justify-end gap-2">
-														<button
-															type="button"
-															onClick={() => openEditModal(row)}
-															aria-label={`Edit ${row.name}`}
-															title={`Edit ${row.name}`}
-														>
-															<EditIcon />
-														</button>
-														<button
-															type="button"
-															onClick={() => {
-																setClientToDelete(row);
-																setDeleteMessage('');
-																setShowDeleteModal(true);
-															}}
-															aria-label={`Delete ${row.name}`}
-															title={`Delete ${row.name}`}
-														>
-															<TrashIcon />
-														</button>
-													</div>
-												</td>
-											</tr>
-										))}
-
-										{loading && (
-											<tr>
-												<td colSpan="7" className="px-4 py-10 text-center" style={{ color: componentStyles.subtleText }}>
-													Loading clients...
-												</td>
-											</tr>
-										)}
-
-										{!loading && rows.length === 0 && (
-											<tr>
-												<td colSpan="7" className="px-4 py-10 text-center" style={{ color: componentStyles.subtleText }}>
-													No clients found.
-												</td>
-											</tr>
-										)}
-									</tbody>
-								</table>
-							</div>
+													<EditIcon />
+												</button>
+												<button
+													type="button"
+													onClick={() => {
+														setClientToDelete(row);
+														setDeleteMessage('');
+														setShowDeleteModal(true);
+													}}
+													aria-label={`Delete ${row.name}`}
+													title={`Delete ${row.name}`}
+												>
+													<TrashIcon />
+												</button>
+											</div>
+										</td>
+									</>
+								)}
+								loading={loading}
+								loadingMessage="Loading clients..."
+								emptyMessage="No clients found."
+								minWidthClassName="min-w-[980px]"
+								emptyCellClassName="px-4 py-10 text-center"
+								loadingCellClassName="px-4 py-10 text-center"
+							/>
 						</div>
-					</section>
+					</SectionCard>
 				</div>
 			</main>
-			{showCreateModal && (
-				<div
-					className="fixed inset-0 z-40 flex items-center justify-center overflow-y-auto px-4 py-6"
-					style={{ backgroundColor: withAlpha(theme.colors.secondary.charcoal, 0.35) }}
-				>
-					<div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl p-6" style={componentStyles.card}>
-						<div className="mb-5 flex items-center justify-between gap-3">
-							<h3 className="text-xl font-semibold" style={componentStyles.sectionTitle}>Add Client</h3>
-							<button
-								type="button"
-								onClick={closeCreateModal}
-								disabled={createBusy}
-								className="rounded-xl px-3 py-1.5 text-sm"
-								style={{
-									backgroundColor: withAlpha(theme.colors.secondary.beige, 0.65),
-									color: theme.colors.secondary.charcoal,
-									cursor: createBusy ? 'not-allowed' : 'pointer',
-								}}
-							>
-								Close
-							</button>
-						</div>
-
-						<form className="space-y-4" onSubmit={handleCreateClient}>
+			<FormModal
+				isOpen={showCreateModal}
+				title="Add Client"
+				onClose={closeCreateModal}
+				closeDisabled={createBusy}
+			>
+				<form className="space-y-4" onSubmit={handleCreateClient}>
 							<div className="grid grid-cols-2 gap-3">
 								<div>
 									<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
@@ -912,34 +865,15 @@ export function ClientList() {
 									{createBusy ? 'Saving...' : 'Create Client'}
 								</button>
 							</div>
-						</form>
-					</div>
-				</div>
-			)}
-			{showEditModal && (
-				<div
-					className="fixed inset-0 z-40 flex items-center justify-center overflow-y-auto px-4 py-6"
-					style={{ backgroundColor: withAlpha(theme.colors.secondary.charcoal, 0.35) }}
-				>
-					<div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl p-6" style={componentStyles.card}>
-						<div className="mb-5 flex items-center justify-between gap-3">
-							<h3 className="text-xl font-semibold" style={componentStyles.sectionTitle}>Edit Client</h3>
-							<button
-								type="button"
-								onClick={closeEditModal}
-								disabled={editBusy}
-								className="rounded-xl px-3 py-1.5 text-sm"
-								style={{
-									backgroundColor: withAlpha(theme.colors.secondary.beige, 0.65),
-									color: theme.colors.secondary.charcoal,
-									cursor: editBusy ? 'not-allowed' : 'pointer',
-								}}
-							>
-								Close
-							</button>
-						</div>
-
-						<form className="space-y-4" onSubmit={handleEditClient}>
+				</form>
+			</FormModal>
+			<FormModal
+				isOpen={showEditModal}
+				title="Edit Client"
+				onClose={closeEditModal}
+				closeDisabled={editBusy}
+			>
+				<form className="space-y-4" onSubmit={handleEditClient}>
 							<div className="grid grid-cols-2 gap-3">
 								<div>
 									<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
@@ -1113,65 +1047,18 @@ export function ClientList() {
 									{editBusy ? 'Saving...' : 'Save Changes'}
 								</button>
 							</div>
-						</form>
-					</div>
-				</div>
-			)}
-			{showDeleteModal && (
-				<div
-					className="fixed inset-0 z-40 flex items-center justify-center px-4"
-					style={{ backgroundColor: withAlpha(theme.colors.secondary.charcoal, 0.35) }}
-				>
-					<div className="w-full max-w-md rounded-3xl p-6" style={componentStyles.card}>
-						<h3 className="text-xl font-semibold" style={componentStyles.sectionTitle}>Delete Client</h3>
-						<p className="mt-3 text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.76) }}>
-							This action cannot be undone. Are you sure you want to delete {clientToDelete?.name || 'this client'}?
-						</p>
-
-						{deleteMessage && (
-							<div
-								className="mt-4 rounded-xl px-3 py-2 text-sm"
-								style={{
-									backgroundColor: withAlpha(theme.colors.error.bg, 0.9),
-									border: `1px solid ${theme.colors.error.border}`,
-									color: theme.colors.error.text,
-								}}
-							>
-								{deleteMessage}
-							</div>
-						)}
-
-						<div className="mt-6 flex items-center justify-end gap-2">
-							<button
-								type="button"
-								onClick={closeDeleteModal}
-								disabled={deleteBusy}
-								className="rounded-xl px-4 py-2 text-sm font-medium"
-								style={{
-									backgroundColor: withAlpha(theme.colors.secondary.beige, 0.7),
-									color: theme.colors.secondary.charcoal,
-									cursor: deleteBusy ? 'not-allowed' : 'pointer',
-								}}
-							>
-								Cancel
-							</button>
-							<button
-								type="button"
-								onClick={handleDeleteClient}
-								disabled={deleteBusy}
-								className="rounded-xl px-4 py-2 text-sm font-semibold"
-								style={{
-									backgroundColor: deleteBusy ? withAlpha(theme.colors.error.text, 0.6) : theme.colors.error.text,
-									color: theme.colors.gray[50],
-									cursor: deleteBusy ? 'not-allowed' : 'pointer',
-								}}
-							>
-								{deleteBusy ? 'Deleting...' : 'Delete Client'}
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
+				</form>
+			</FormModal>
+			<ConfirmModal
+				isOpen={showDeleteModal}
+				title="Delete Client"
+				description={`This action cannot be undone. Are you sure you want to delete ${clientToDelete?.name || 'this client'}?`}
+				errorMessage={deleteMessage}
+				onCancel={closeDeleteModal}
+				onConfirm={handleDeleteClient}
+				isBusy={deleteBusy}
+				confirmLabel="Delete Client"
+			/>
 		</div>
 	);
 }

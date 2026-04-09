@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppSidebar } from '../components/AppSidebar';
+import { PageHeader } from '../components/PageHeader';
+import { ErrorAlert } from '../components/ErrorAlert';
+import { FormModal } from '../components/FormModal';
+import { ConfirmModal } from '../components/ConfirmModal';
+import { useLiveNow } from '../hooks/useLiveNow';
+import { SectionCard } from '../components/SectionCard';
 import { clientsAPI, filesAPI, notesAPI } from '../api/api';
 import { useAuth } from '../context/AuthContext';
 import { theme } from '../utils/theme';
@@ -15,7 +21,7 @@ export function ClientProfile() {
 
   const [activeNav, setActiveNav] = useState('Clients');
   const [activeTab, setActiveTab] = useState('notes');
-  const [now, setNow] = useState(new Date());
+  const now = useLiveNow();
   const [client, setClient] = useState(null);
   const [appointments, setAppointments] = useState([]);
   const [files, setFiles] = useState([]);
@@ -179,11 +185,6 @@ export function ClientProfile() {
     setIsNoteEditorOpen(false);
     setNoteStatusMessage(message);
     lastSavedPayloadRef.current = '';
-  }, []);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 60000);
-    return () => window.clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -606,29 +607,10 @@ export function ClientProfile() {
       <AppSidebar activeNav={activeNav} onNavSelect={setActiveNav} user={user} />
 
       <main className="h-screen flex-1 overflow-y-auto">
-        {/* Header */}
-        <header
-          className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 px-6 py-4 md:px-8"
-          style={{
-            backgroundColor: withAlpha(theme.colors.gray[50], 0.92),
-            backdropFilter: 'blur(12px)',
-            borderBottom: `1px solid ${withAlpha(theme.colors.secondary.beige, 0.9)}`,
-          }}
-        >
-          <h1 className="text-xl font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
-            Welcome, {user?.name?.split(' ')[0] || '!'}
-          </h1>
-          <span className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6) }}>
-            {formatLongDate(now)} {formatClock(now)}
-          </span>
-        </header>
+        <PageHeader userName={user?.name} now={now} />
 
         <div className="space-y-5 px-6 py-6 md:px-8">
-          {error && (
-            <div className="rounded-2xl px-4 py-3 text-sm" style={{ backgroundColor: theme.colors.error.bg, color: theme.colors.error.text, border: `1px solid ${theme.colors.error.border}` }}>
-              {error}
-            </div>
-          )}
+          <ErrorAlert message={error} />
 
           {/* Back button and client header */}
           <button
@@ -645,9 +627,9 @@ export function ClientProfile() {
             {/* Left column - Client info and emergency contact */}
             <div className="space-y-4">
               {/* Client Info Card */}
-              <div className="rounded-3xl p-6" style={componentStyles.card}>
-                <div className="mb-4 flex flex-wrap items-center gap-3">
-                  <h2 className="text-2xl font-semibold">{clientName}</h2>
+              <SectionCard
+                title={clientName}
+                action={(
                   <button
                     type="button"
                     className="rounded-full px-3 py-1 text-xs font-semibold capitalize"
@@ -663,7 +645,9 @@ export function ClientProfile() {
                   >
                     {clientStatus}
                   </button>
-                </div>
+                )}
+                bodyClassName="space-y-0"
+              >
 
                 <div className="space-y-3 text-sm">
                   {client.email && (
@@ -723,24 +707,15 @@ export function ClientProfile() {
                     Delete Client
                   </button>
                 </div>
-              </div>
+              </SectionCard>
 
               {/* Emergency Contact Card */}
               {(emergencyContactName || emergencyContactPhone || emergencyContactAddress) && (
-                <div
-                  className="rounded-3xl p-6"
-                  style={{
-                    ...componentStyles.card,
-                    backgroundColor: theme.colors.gray[50],
-                    border: `1px solid ${withAlpha(theme.colors.error.text, 0.28)}`,
-                  }}
+                <SectionCard
+                  title="Emergency Contact"
+                  className="rounded-3xl"
+                  bodyClassName="space-y-0"
                 >
-                  <h3
-                    className="mb-3 text-lg font-bold"
-                    style={{ color: theme.colors.secondary.charcoal }}
-                  >
-                    Emergency Contact
-                  </h3>
                   <div className="space-y-3 text-sm">
                     {emergencyContactName && (
                       <div>
@@ -761,13 +736,12 @@ export function ClientProfile() {
                       </div>
                     )}
                   </div>
-                </div>
+                </SectionCard>
               )}
 
               {/* Next Appointment Card */}
               {nextAppointment && (
-                <div className="rounded-3xl p-6" style={componentStyles.card}>
-                  <h3 className="mb-3 font-semibold">Next Appointment</h3>
+                <SectionCard title="Next Appointment" className="rounded-3xl" bodyClassName="space-y-0">
                   <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.7) }}>
                     {new Intl.DateTimeFormat('en-IE', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date(nextAppointment.date))}
                   </p>
@@ -789,13 +763,13 @@ export function ClientProfile() {
                   >
                     View in Calendar
                   </button>
-                </div>
+                </SectionCard>
               )}
             </div>
 
             {/* Right column - Tabs and History */}
             <div className="space-y-4">
-              <div className="rounded-3xl p-6" style={componentStyles.card}>
+              <SectionCard title="Client Information" className="rounded-3xl" bodyClassName="space-y-0">
                 {/* Tabs */}
                 <div className="mb-6 flex gap-6 border-b" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9) }}>
                   {[
@@ -1259,37 +1233,28 @@ export function ClientProfile() {
                     )}
                   </div>
                 )}
-              </div>
+              </SectionCard>
 
-              {viewingNote && (
-                <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
-                  <div className="max-h-[85vh] w-full max-w-2xl overflow-hidden rounded-3xl" style={componentStyles.card}>
-                    <div className="flex items-center justify-between border-b px-5 py-4" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9) }}>
-                      <div>
-                        <p className="text-sm font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
-                          {new Intl.DateTimeFormat('en-IE', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(viewingNote.createdAt || new Date()))}
-                        </p>
-                        <p className="text-xs" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.64) }}>
-                          {viewingNote.templateType || 'Note'}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setViewingNote(null)}
-                        className="rounded-xl px-3 py-1.5 text-sm font-semibold"
-                        style={{ backgroundColor: withAlpha(theme.colors.secondary.beige, 0.7), color: theme.colors.secondary.charcoal }}
-                      >
-                        Close
-                      </button>
-                    </div>
-                    <div className="max-h-[65vh] overflow-y-auto px-5 py-4">
-                      <p className="whitespace-pre-wrap text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.86) }}>
-                        {viewingNote.content || 'No content'}
-                      </p>
-                    </div>
-                  </div>
+              <FormModal
+                isOpen={Boolean(viewingNote)}
+                title="View Note"
+                onClose={() => setViewingNote(null)}
+                maxWidthClass="max-w-2xl"
+              >
+                <div className="mb-4 border-b pb-4" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9) }}>
+                  <p className="text-sm font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
+                    {new Intl.DateTimeFormat('en-IE', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(viewingNote?.createdAt || new Date()))}
+                  </p>
+                  <p className="text-xs" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.64) }}>
+                    {viewingNote?.templateType || 'Note'}
+                  </p>
                 </div>
-              )}
+                <div className="max-h-[65vh] overflow-y-auto">
+                  <p className="whitespace-pre-wrap text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.86) }}>
+                    {viewingNote?.content || 'No content'}
+                  </p>
+                </div>
+              </FormModal>
 
               <div className="rounded-3xl p-6" style={componentStyles.card}>
                 <div className="mb-4 flex items-center justify-between gap-3">
@@ -1355,23 +1320,13 @@ export function ClientProfile() {
         </div>
       </main>
 
-      {showEditClientModal && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg rounded-3xl p-6" style={componentStyles.card}>
-            <div className="mb-5 flex items-center justify-between gap-3">
-              <h3 className="text-xl font-semibold" style={componentStyles.sectionTitle}>Edit Client</h3>
-              <button
-                type="button"
-                onClick={closeEditClientModal}
-                disabled={editClientBusy}
-                className="rounded-xl px-3 py-1.5 text-sm font-semibold"
-                style={{ backgroundColor: withAlpha(theme.colors.secondary.beige, 0.7), color: theme.colors.secondary.charcoal }}
-              >
-                Close
-              </button>
-            </div>
-
-            <form className="space-y-4" onSubmit={handleSaveClientDetails}>
+      <FormModal
+        isOpen={showEditClientModal}
+        title="Edit Client"
+        onClose={closeEditClientModal}
+        closeDisabled={editClientBusy}
+      >
+        <form className="space-y-4" onSubmit={handleSaveClientDetails}>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
@@ -1534,154 +1489,41 @@ export function ClientProfile() {
                   {editClientBusy ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+        </form>
+      </FormModal>
 
-      {showDeleteClientModal && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-3xl p-6" style={componentStyles.card}>
-            <h3 className="text-xl font-semibold" style={componentStyles.sectionTitle}>Delete Client</h3>
-            <p className="mt-3 text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.76) }}>
-              This action cannot be undone. Are you sure you want to delete {clientName}?
-            </p>
+      <ConfirmModal
+        isOpen={showDeleteClientModal}
+        title="Delete Client"
+        description={`This action cannot be undone. Are you sure you want to delete ${clientName}?`}
+        errorMessage={deleteClientMessage}
+        onCancel={closeDeleteClientModal}
+        onConfirm={handleDeleteClient}
+        isBusy={deleteClientBusy}
+        confirmLabel="Delete Client"
+      />
 
-            {deleteClientMessage && (
-              <div
-                className="mt-4 rounded-xl px-3 py-2 text-sm"
-                style={{
-                  backgroundColor: withAlpha(theme.colors.error.bg, 0.9),
-                  border: `1px solid ${theme.colors.error.border}`,
-                  color: theme.colors.error.text,
-                }}
-              >
-                {deleteClientMessage}
-              </div>
-            )}
+      <ConfirmModal
+        isOpen={showDeleteNoteModal}
+        title="Delete Note"
+        description="This action cannot be undone. Are you sure you want to delete this note?"
+        errorMessage={deleteNoteMessage}
+        onCancel={closeDeleteNoteModal}
+        onConfirm={handleConfirmDeleteNote}
+        isBusy={deleteNoteBusy}
+        confirmLabel="Delete Note"
+      />
 
-            <div className="mt-6 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={closeDeleteClientModal}
-                disabled={deleteClientBusy}
-                className="rounded-xl px-4 py-2 text-sm font-medium"
-                style={{ backgroundColor: withAlpha(theme.colors.secondary.beige, 0.7), color: theme.colors.secondary.charcoal }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteClient}
-                disabled={deleteClientBusy}
-                className="rounded-xl px-4 py-2 text-sm font-semibold"
-                style={{
-                  backgroundColor: deleteClientBusy ? withAlpha(theme.colors.error.text, 0.6) : theme.colors.error.text,
-                  color: theme.colors.gray[50],
-                }}
-              >
-                {deleteClientBusy ? 'Deleting...' : 'Delete Client'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showDeleteNoteModal && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-3xl p-6" style={componentStyles.card}>
-            <h3 className="text-xl font-semibold" style={componentStyles.sectionTitle}>Delete Note</h3>
-            <p className="mt-3 text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.76) }}>
-              This action cannot be undone. Are you sure you want to delete this note?
-            </p>
-
-            {deleteNoteMessage && (
-              <div
-                className="mt-4 rounded-xl px-3 py-2 text-sm"
-                style={{
-                  backgroundColor: withAlpha(theme.colors.error.bg, 0.9),
-                  border: `1px solid ${theme.colors.error.border}`,
-                  color: theme.colors.error.text,
-                }}
-              >
-                {deleteNoteMessage}
-              </div>
-            )}
-
-            <div className="mt-6 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={closeDeleteNoteModal}
-                disabled={deleteNoteBusy}
-                className="rounded-xl px-4 py-2 text-sm font-medium"
-                style={{ backgroundColor: withAlpha(theme.colors.secondary.beige, 0.7), color: theme.colors.secondary.charcoal }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmDeleteNote}
-                disabled={deleteNoteBusy}
-                className="rounded-xl px-4 py-2 text-sm font-semibold"
-                style={{
-                  backgroundColor: deleteNoteBusy ? withAlpha(theme.colors.error.text, 0.6) : theme.colors.error.text,
-                  color: theme.colors.gray[50],
-                }}
-              >
-                {deleteNoteBusy ? 'Deleting...' : 'Delete Note'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showDeleteFileModal && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-3xl p-6" style={componentStyles.card}>
-            <h3 className="text-xl font-semibold" style={componentStyles.sectionTitle}>Delete File</h3>
-            <p className="mt-3 text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.76) }}>
-              This action cannot be undone. Are you sure you want to delete this file?
-            </p>
-
-            {deleteFileMessage && (
-              <div
-                className="mt-4 rounded-xl px-3 py-2 text-sm"
-                style={{
-                  backgroundColor: withAlpha(theme.colors.error.bg, 0.9),
-                  border: `1px solid ${theme.colors.error.border}`,
-                  color: theme.colors.error.text,
-                }}
-              >
-                {deleteFileMessage}
-              </div>
-            )}
-
-            <div className="mt-6 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={closeDeleteFileModal}
-                disabled={deleteFileBusy}
-                className="rounded-xl px-4 py-2 text-sm font-medium"
-                style={{ backgroundColor: withAlpha(theme.colors.secondary.beige, 0.7), color: theme.colors.secondary.charcoal }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmDeleteFile}
-                disabled={deleteFileBusy}
-                className="rounded-xl px-4 py-2 text-sm font-semibold"
-                style={{
-                  backgroundColor: deleteFileBusy ? withAlpha(theme.colors.error.text, 0.6) : theme.colors.error.text,
-                  color: theme.colors.gray[50],
-                }}
-              >
-                {deleteFileBusy ? 'Deleting...' : 'Delete File'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        isOpen={showDeleteFileModal}
+        title="Delete File"
+        description="This action cannot be undone. Are you sure you want to delete this file?"
+        errorMessage={deleteFileMessage}
+        onCancel={closeDeleteFileModal}
+        onConfirm={handleConfirmDeleteFile}
+        isBusy={deleteFileBusy}
+        confirmLabel="Delete File"
+      />
     </div>
   );
 }

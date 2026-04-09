@@ -1,5 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { subscribeToToasts, toast as toastBus } from '../utils/toastBus';
+import { theme } from '../utils/theme';
+import { withAlpha } from '../utils/formatters';
 
 const ToastContext = createContext({
   toast: toastBus,
@@ -7,19 +9,19 @@ const ToastContext = createContext({
 
 const toneByType = {
   success: {
-    bg: '#E9F7EF',
-    border: '#6BBF8D',
-    text: '#1D5B3A',
+    bg: withAlpha(theme.colors.secondary.sage, 0.9),
+    border: withAlpha(theme.colors.primary.DEFAULT, 0.45),
+    text: theme.colors.primary.darker,
   },
   error: {
-    bg: '#FCEDEE',
-    border: '#E6A2AA',
-    text: '#8C2F39',
+    bg: withAlpha(theme.colors.error.bg, 0.95),
+    border: withAlpha(theme.colors.error.border, 0.95),
+    text: theme.colors.error.text,
   },
   info: {
-    bg: '#EDF2FF',
-    border: '#A8B8E8',
-    text: '#2E4A8C',
+    bg: withAlpha(theme.colors.primary.lighter, 0.45),
+    border: withAlpha(theme.colors.primary.DEFAULT, 0.35),
+    text: theme.colors.primary.darker,
   },
 };
 

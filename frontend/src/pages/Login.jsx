@@ -5,6 +5,7 @@ import { authAPI } from '../api/api';
 import { Logo } from '../components/Logo';
 import { FloatingLabel } from '../components/FloatingLabel';
 import { theme } from '../utils/theme';
+import { withAlpha } from '../utils/formatters';
 
 export const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -108,7 +109,7 @@ export const Login = () => {
               fontFamily: theme.fonts.serif,
               letterSpacing: '0.04em',
               cursor: loading ? 'not-allowed' : 'pointer',
-              boxShadow: loading ? 'none' : '0 4px 14px rgba(107, 126, 90, 0.35)',
+              boxShadow: loading ? 'none' : `0 4px 14px ${withAlpha(theme.colors.primary.DEFAULT, 0.35)}`,
             }}
             onMouseEnter={e => { if (!loading) e.target.style.backgroundColor = theme.colors.primary.dark; }}
             onMouseLeave={e => { if (!loading) e.target.style.backgroundColor = theme.colors.primary.DEFAULT; }}

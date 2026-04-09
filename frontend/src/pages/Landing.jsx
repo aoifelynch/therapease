@@ -4,6 +4,7 @@ import { Logo } from '../components/Logo';
 import { theme } from '../utils/theme';
 import { authAPI } from '../api/api';
 import { useAuth } from '../context/AuthContext';
+import { withAlpha } from '../utils/formatters';
 
 /* ─── Navbar ─── */
 const Navbar = () => {
@@ -98,7 +99,7 @@ const Hero = () => {
             <em className="font-serif italic" style={{ color: theme.colors.primary.DEFAULT }}>Administration</em>
           </h1>
 
-          <p className="text-base mb-10 leading-relaxed max-w-sm" style={{ color: '#5A6A50' }}>
+          <p className="text-base mb-10 leading-relaxed max-w-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.72) }}>
             TherapEase helps therapists manage appointments, client records, payments and more — so you can focus on what matters most: your clients.
           </p>
 
@@ -172,7 +173,7 @@ const Features = () => (
     {/* Circles */}
     <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full pointer-events-none" style={{ backgroundColor: theme.colors.primary.lighter, opacity: 0.2 }} />
     <div className="absolute bottom-0 -left-12 w-56 h-56 rounded-full pointer-events-none" style={{ backgroundColor: theme.colors.primary.darker, opacity: 0.25 }} />
-    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full pointer-events-none" style={{ backgroundColor: 'rgba(255,255,255,0.04)' }} />
+    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full pointer-events-none" style={{ backgroundColor: withAlpha(theme.colors.gray[50], 0.04) }} />
     <div className="max-w-6xl mx-auto px-6 relative z-10">
       <div className="text-center mb-16">
         <p className="text-xs font-semibold tracking-widest uppercase mb-3" style={{ color: theme.colors.primary.lighter }}>
@@ -181,7 +182,7 @@ const Features = () => (
         <h2 className="text-4xl font-bold font-serif mb-4" style={{ color: theme.colors.secondary.cream }}>
           Built for Therapists
         </h2>
-        <p className="max-w-xl mx-auto text-base" style={{ color: 'rgba(245,240,232,0.75)' }}>
+        <p className="max-w-xl mx-auto text-base" style={{ color: withAlpha(theme.colors.secondary.cream, 0.75) }}>
           Every feature is thoughtfully crafted around the real workflows of private practice therapists.
         </p>
       </div>
@@ -195,12 +196,12 @@ const Features = () => (
           { icon: '📊', title: 'Revenue Reports', desc: 'Clear picture of practice income week by week.' },
           { icon: '🔔', title: 'Reminders', desc: 'Get notified for missing notes and unpaid sessions.' },
         ].map((f, i) => (
-          <div key={i} className="rounded-2xl p-8 border transition-transform hover:shadow-xl" style={{ backgroundColor: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.15)' }}>
+          <div key={i} className="rounded-2xl p-8 border transition-transform hover:shadow-xl" style={{ backgroundColor: withAlpha(theme.colors.gray[50], 0.08), borderColor: withAlpha(theme.colors.gray[50], 0.15) }}>
             <div className="text-3xl mb-4">{f.icon}</div>
             <h3 className="font-bold mb-2" style={{ color: theme.colors.secondary.cream }}>
               {f.title}
             </h3>
-            <p className="text-sm" style={{ color: 'rgba(245,240,232,0.7)' }}>
+            <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.cream, 0.7) }}>
               {f.desc}
             </p>
           </div>
@@ -224,7 +225,7 @@ const About = () => (
         Built to give therapists<br />
         <em className="font-serif italic" style={{ color: theme.colors.primary.DEFAULT }}>their time back</em>
       </h2>
-      <p className="max-w-2xl mx-auto mb-12 text-base leading-relaxed" style={{ color: '#5A6A50' }}>
+      <p className="max-w-2xl mx-auto mb-12 text-base leading-relaxed" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.72) }}>
         TherapEase was created after seeing how much time therapists lose each week to scheduling, chasing payments, and managing paperwork. We built one calm, focused tool that handles all of it.
       </p>
 
@@ -266,29 +267,29 @@ const Contact = () => {
         </div>
 
         {sent ? (
-          <div className="rounded-2xl p-8 text-center border" style={{ backgroundColor: 'rgba(255,255,255,0.07)', borderColor: 'rgba(255,255,255,0.15)' }}>
+          <div className="rounded-2xl p-8 text-center border" style={{ backgroundColor: withAlpha(theme.colors.gray[50], 0.07), borderColor: withAlpha(theme.colors.gray[50], 0.15) }}>
             <p className="text-4xl mb-3">🌿</p>
             <p className="font-serif font-semibold mb-2" style={{ color: theme.colors.secondary.cream }}>
               Message sent!
             </p>
-            <p className="text-sm" style={{ color: 'rgba(245,240,232,0.6)' }}>
+            <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.cream, 0.6) }}>
               We'll get back to you within 24 hours.
             </p>
           </div>
         ) : (
-          <div className="rounded-2xl p-8 border" style={{ backgroundColor: 'rgba(255,255,255,0.1)', borderColor: 'rgba(255,255,255,0.25)' }}>
+          <div className="rounded-2xl p-8 border" style={{ backgroundColor: withAlpha(theme.colors.gray[50], 0.1), borderColor: withAlpha(theme.colors.gray[50], 0.25) }}>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <input className="w-full px-4 py-3 border rounded-lg text-sm focus:outline-none placeholder-[rgba(245,240,232,0.5)]" placeholder="Your name" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} style={{ borderColor: 'rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.15)', color: theme.colors.secondary.cream }} />
-              <input className="w-full px-4 py-3 border rounded-lg text-sm focus:outline-none placeholder-[rgba(245,240,232,0.5)]" type="email" placeholder="Your email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} style={{ borderColor: 'rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.15)', color: theme.colors.secondary.cream }} />
-              <textarea className="w-full px-4 py-3 border rounded-lg text-sm focus:outline-none placeholder-[rgba(245,240,232,0.5)]" placeholder="How can we help?" rows={5} value={form.message} onChange={e => setForm(p => ({ ...p, message: e.target.value }))} style={{ borderColor: 'rgba(255,255,255,0.35)', backgroundColor: 'rgba(255,255,255,0.15)', color: theme.colors.secondary.cream }} />
+              <input className="w-full px-4 py-3 border rounded-lg text-sm focus:outline-none" placeholder="Your name" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} style={{ borderColor: withAlpha(theme.colors.gray[50], 0.35), backgroundColor: withAlpha(theme.colors.gray[50], 0.15), color: theme.colors.secondary.cream }} />
+              <input className="w-full px-4 py-3 border rounded-lg text-sm focus:outline-none" type="email" placeholder="Your email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} style={{ borderColor: withAlpha(theme.colors.gray[50], 0.35), backgroundColor: withAlpha(theme.colors.gray[50], 0.15), color: theme.colors.secondary.cream }} />
+              <textarea className="w-full px-4 py-3 border rounded-lg text-sm focus:outline-none" placeholder="How can we help?" rows={5} value={form.message} onChange={e => setForm(p => ({ ...p, message: e.target.value }))} style={{ borderColor: withAlpha(theme.colors.gray[50], 0.35), backgroundColor: withAlpha(theme.colors.gray[50], 0.15), color: theme.colors.secondary.cream }} />
               <button
                 type="submit"
                 className="w-full py-3 font-medium rounded-lg text-sm transition-all duration-150"
-                style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: theme.colors.secondary.cream, border: '1px solid rgba(255,255,255,0.35)' }}
-                onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.32)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.55)'; }}
-                onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)'; }}
-                onMouseDown={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.45)'; }}
-                onMouseUp={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.32)'; }}
+                style={{ backgroundColor: withAlpha(theme.colors.gray[50], 0.2), color: theme.colors.secondary.cream, border: `1px solid ${withAlpha(theme.colors.gray[50], 0.35)}` }}
+                onMouseEnter={e => { e.currentTarget.style.backgroundColor = withAlpha(theme.colors.gray[50], 0.32); e.currentTarget.style.borderColor = withAlpha(theme.colors.gray[50], 0.55); }}
+                onMouseLeave={e => { e.currentTarget.style.backgroundColor = withAlpha(theme.colors.gray[50], 0.2); e.currentTarget.style.borderColor = withAlpha(theme.colors.gray[50], 0.35); }}
+                onMouseDown={e => { e.currentTarget.style.backgroundColor = withAlpha(theme.colors.gray[50], 0.45); }}
+                onMouseUp={e => { e.currentTarget.style.backgroundColor = withAlpha(theme.colors.gray[50], 0.32); }}
               >
                 Send Message
               </button>
@@ -301,7 +302,7 @@ const Contact = () => {
 };
 
 const Footer = () => (
-  <footer className="py-10 border-t" style={{ backgroundColor: theme.colors.secondary.cream, borderColor: 'rgba(200,213,185,0.15)' }}>
+  <footer className="py-10 border-t" style={{ backgroundColor: theme.colors.secondary.cream, borderColor: withAlpha(theme.colors.primary.lighter, 0.15) }}>
     <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
       <Logo />
       <p className="text-xs" style={{ color: theme.colors.primary.DEFAULT }}>

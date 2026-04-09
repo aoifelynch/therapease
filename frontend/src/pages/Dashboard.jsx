@@ -1,10 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { AppSidebar } from '../components/AppSidebar';
+import { PageHeader } from '../components/PageHeader';
+import { ErrorAlert } from '../components/ErrorAlert';
+import { ConfirmModal } from '../components/ConfirmModal';
+import { useLiveNow } from '../hooks/useLiveNow';
+import { SectionCard } from '../components/SectionCard';
+import { StatCard } from '../components/StatCard';
+import { AppDataTable } from '../components/AppDataTable';
 import { appointmentsAPI, clientsAPI, paymentsAPI, remindersAPI, todosAPI } from '../api/api';
 import { useAuth } from '../context/AuthContext';
 import { theme } from '../utils/theme';
-import { withAlpha, isSameDay, startOfWeek, startOfMonth, formatCurrency, formatLongDate, formatClock, formatTime, getClientName } from '../utils/formatters';
+import { withAlpha, isSameDay, startOfWeek, startOfMonth, formatCurrency, formatLongDate, formatTime, getClientName } from '../utils/formatters';
 import { componentStyles } from '../utils/componentStyles';
 import { quickActions } from '../constants/sidebarConstants';
 import {
@@ -21,7 +28,6 @@ export function Dashboard() {
   const [todoTitle, setTodoTitle] = useState('');
   const [todoSubmitting, setTodoSubmitting] = useState(false);
   const [todoBusyId, setTodoBusyId] = useState(null);
-  const [now, setNow] = useState(new Date());
   const [clients, setClients] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [reminderIssues, setReminderIssues] = useState([]);
@@ -31,14 +37,7 @@ export function Dashboard() {
   const [todoToDelete, setTodoToDelete] = useState(null);
   const [deleteTodoBusy, setDeleteTodoBusy] = useState(false);
   const [deleteTodoMessage, setDeleteTodoMessage] = useState('');
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setNow(new Date());
-    }, 60000);
-
-    return () => window.clearInterval(timer);
-  }, []);
+  const now = useLiveNow();
 
   useEffect(() => {
     const loadDashboard = async () => {
@@ -97,7 +96,36 @@ export function Dashboard() {
   const pendingPayments = payments.filter((payment) => payment.status === 'pending');
   const paidPayments = payments.filter((payment) => payment.status === 'paid');
   const pendingTodos = todos.filter((todo) => !todo.completed);
-  const activeClients = clients.filter(Boolean).length;
+  const totalClients = clients.filter(Boolean).length;
+
+  const activeClients = useMemo(() => {
+    const activeClientIds = new Set();
+
+    clients.forEach((client) => {
+      const clientId = client.id || client._id;
+      if (!clientId) return;
+
+      const nextAppointment = appointments
+        .filter((appointment) => {
+          const appointmentClientId = typeof appointment.client === 'string'
+            ? appointment.client
+            : appointment.client?.id || appointment.client?._id;
+          return appointmentClientId === clientId && appointment.status !== 'cancelled';
+        })
+        .map((appointment) => ({
+          ...appointment,
+          dateTime: toAppointmentDateTime(appointment, appointment.startTime),
+        }))
+        .filter((appointment) => appointment.dateTime && appointment.dateTime >= now)
+        .sort((first, second) => first.dateTime - second.dateTime)[0] || null;
+
+      if (nextAppointment) {
+        activeClientIds.add(clientId);
+      }
+    });
+
+    return activeClientIds.size;
+  }, [appointments, clients, now]);
 
   const startWeek = startOfWeek(now);
   const startMonth = startOfMonth(now);
@@ -198,7 +226,7 @@ export function Dashboard() {
     {
       label: 'Active Clients',
       value: String(activeClients),
-      sub: activeClients === 1 ? '1 client profile' : `${activeClients} client profiles`,
+      sub: `${activeClients} active client${activeClients === 1 ? '' : 's'} out of ${totalClients} client${totalClients === 1 ? '' : 's'}`,
       color: theme.colors.secondary.sage,
       accent: theme.colors.primary.DEFAULT,
     },
@@ -284,55 +312,23 @@ export function Dashboard() {
 
       {/* Main content area */}
       <main className="h-screen flex-1 overflow-y-auto">
-        {/* Header */}
-        <header
-          className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 px-6 py-4 md:px-8"
-          style={{
-            backgroundColor: withAlpha(theme.colors.gray[50], 0.92),
-            backdropFilter: 'blur(12px)',
-            borderBottom: `1px solid ${withAlpha(theme.colors.secondary.beige, 0.9)}`,
-          }}
-        >
-          <div>
-            <h1 className="text-xl font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
-              Welcome, {user?.name?.split(' ')[0] || 'there'}
-            </h1>
-          </div>
-          <span className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6) }}>
-            {formatLongDate(now)} {formatClock(now)}
-          </span>
-        </header>
+        <PageHeader userName={user?.name} now={now} />
 
         <div className="space-y-6 px-6 py-6 md:px-8">
           {/* Error alert */}
-          {error && (
-            <div className="rounded-2xl px-4 py-3 text-sm" style={{ backgroundColor: theme.colors.error.bg, color: theme.colors.error.text, border: `1px solid ${theme.colors.error.border}` }}>
-              {error}
-            </div>
-          )}
+          <ErrorAlert message={error} />
 
           {/* Stats Cards */}
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {statCards.map((card) => (
-              <div key={card.label} className="overflow-hidden rounded-3xl" style={componentStyles.card}>
-                <div className="px-4 py-2" style={{ backgroundColor: card.color }}>
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: theme.colors.secondary.charcoal }}>
-                    {card.label}
-                  </p>
-                </div>
-                <div className="px-4 py-5">
-                  <p className="text-3xl font-semibold" style={{ color: card.accent }}>{card.value}</p>
-                  <p className="mt-1 text-xs" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.58) }}>{card.sub}</p>
-                </div>
-              </div>
+              <StatCard key={card.label} {...card} />
             ))}
           </section>
 
           {/* Quick Actions & Reminders */}
           <section className="grid gap-4 xl:grid-cols-2">
             {/* Quick Actions */}
-            <div className="rounded-3xl p-6" style={componentStyles.card}>
-              <h2 className="mb-5 text-xl font-semibold" style={componentStyles.sectionTitle}>Quick Actions</h2>
+            <SectionCard title="Quick Actions">
               <div className="flex flex-wrap justify-around gap-5">
                 {quickActions.map((action) => {
                   const Icon = action.icon;
@@ -361,19 +357,21 @@ export function Dashboard() {
                   );
                 })}
               </div>
-            </div>
+            </SectionCard>
 
             {/* Reminders */}
-            <div id="reminders" ref={remindersSectionRef} className="rounded-3xl p-6" style={componentStyles.card}>
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <h2 className="text-xl font-semibold" style={componentStyles.sectionTitle}>Reminders</h2>
+            <SectionCard
+              title="Reminders"
+              action={(
                 <span className="text-xs font-medium uppercase tracking-[0.16em]" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.5) }}>
                   {allReminders.length} total
                 </span>
-              </div>
+              )}
+              className="scroll-mt-6"
+              bodyClassName="space-y-3"
+            >
 
-              <div className="space-y-3">
-                {(loading ? [] : prioritizedRemindersByClient.slice(0, 6)).map((reminderGroup) => {
+              {(loading ? [] : prioritizedRemindersByClient.slice(0, 6)).map((reminderGroup) => {
                   const tone = componentStyles.getReminderTone(reminderGroup.status);
                   const reminderClient = clientLookup[reminderGroup.client] || 'Practice reminder';
                   const isFocusedReminder = Boolean(
@@ -406,93 +404,75 @@ export function Dashboard() {
                     No reminders yet.
                   </p>
                 )}
-              </div>
-            </div>
+            </SectionCard>
           </section>
 
           {/* Appointments & Revenue */}
           <section className="grid gap-4 xl:grid-cols-[2fr_1fr]">
             {/* Appointments Table */}
-            <div className="rounded-3xl p-6" style={componentStyles.card}>
-              <h2 className="mb-2 text-xl font-semibold" style={componentStyles.sectionTitle}>Upcoming Appointments</h2>
+            <SectionCard title="Upcoming Appointments" bodyClassName="space-y-0">
               <p className="mb-6 text-xs" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.5) }}>
                 {formatLongDate(now)}
               </p>
 
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[640px] table-fixed text-sm">
-                  <colgroup>
-                    <col className="w-[16%]" />
-                    <col className="w-[26%]" />
-                    <col className="w-[24%]" />
-                    <col className="w-[18%]" />
-                    <col className="w-[16%]" />
-                  </colgroup>
-                  <thead>
-                    <tr style={{ borderBottom: `1px solid ${withAlpha(theme.colors.secondary.beige, 0.9)}`, color: withAlpha(theme.colors.secondary.charcoal, 0.58) }}>
-                      <th className="pb-2 pl-4 text-left text-xs font-semibold uppercase tracking-[0.16em]">Time</th>
-                      <th className="pb-2 text-left text-xs font-semibold uppercase tracking-[0.16em]">Client</th>
-                      <th className="pb-2 text-left text-xs font-semibold uppercase tracking-[0.16em]">Location</th>
-                      <th className="pb-2 text-left text-xs font-semibold uppercase tracking-[0.16em]">Status</th>
-                      <th className="pb-2 pr-4 text-left text-xs font-semibold uppercase tracking-[0.16em]">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {upcomingAppointments.map((appointment, index) => {
-                      const tone = componentStyles.getStatusTone(appointment.status);
-                      const hasZoom = appointment.type === 'online' && appointment.zoomLink;
-                      const rowBackground = componentStyles.getZebraRow(index);
+              <AppDataTable
+                columns={[
+                  { key: 'time', label: 'Time', widthClassName: 'w-[16%]', headerClassName: 'pl-4 pr-3' },
+                  { key: 'client', label: 'Client', widthClassName: 'w-[26%]' },
+                  { key: 'location', label: 'Location', widthClassName: 'w-[24%]' },
+                  { key: 'status', label: 'Status', widthClassName: 'w-[18%]' },
+                  { key: 'action', label: 'Action', widthClassName: 'w-[16%]', headerClassName: 'pl-3 pr-4' },
+                ]}
+                rows={upcomingAppointments}
+                rowKey={(appointment) => appointment._id || appointment.id}
+                renderRow={(appointment) => {
+                  const tone = componentStyles.getStatusTone(appointment.status);
+                  const hasZoom = appointment.type === 'online' && appointment.zoomLink;
 
-                      return (
-                        <tr key={appointment._id || appointment.id} style={{ borderBottom: `1px solid ${withAlpha(theme.colors.secondary.beige, 0.45)}`, color: withAlpha(theme.colors.secondary.charcoal, 0.78), backgroundColor: rowBackground }}>
-                          <td className="py-3 pl-4 font-medium" style={{ color: theme.colors.secondary.charcoal }}>{formatTime(appointment)}</td>
-                          <td className="py-3">{getClientName(appointment.client)}</td>
-                          <td className="py-3">{appointment.type === 'online' ? 'Online' : 'In-person'}</td>
-                          <td className="py-3">
-                            <span className="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize" style={{ backgroundColor: tone.background, color: tone.color }}>
-                              {appointment.status}
-                            </span>
-                          </td>
-                          <td className="py-3 pr-4">
-                            {hasZoom ? (
-                              <a
-                                href={appointment.zoomLink}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-semibold"
-                                style={{ backgroundColor: withAlpha(theme.colors.primary.DEFAULT, 0.16), color: theme.colors.primary.darker }}
-                              >
-                                <ExternalLinkIcon />
-                                Join Zoom
-                              </a>
-                            ) : (
-                              <button
-                                type="button"
-                                className="inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-semibold"
-                                style={{ backgroundColor: withAlpha(theme.colors.secondary.beige, 0.65), color: theme.colors.secondary.charcoal }}
-                              >
-                                <EditIcon />
-                                View
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {!loading && upcomingAppointments.length === 0 && (
-                <p className="pt-4 text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.58) }}>
-                  No appointments scheduled yet.
-                </p>
-              )}
-            </div>
+                  return (
+                    <>
+                      <td className="py-3 pl-4 font-medium" style={{ color: theme.colors.secondary.charcoal }}>{formatTime(appointment)}</td>
+                      <td className="py-3">{getClientName(appointment.client)}</td>
+                      <td className="py-3">{appointment.type === 'online' ? 'Online' : 'In-person'}</td>
+                      <td className="py-3">
+                        <span className="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize" style={{ backgroundColor: tone.background, color: tone.color }}>
+                          {appointment.status}
+                        </span>
+                      </td>
+                      <td className="py-3 pr-4">
+                        {hasZoom ? (
+                          <a
+                            href={appointment.zoomLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-semibold"
+                            style={{ backgroundColor: withAlpha(theme.colors.primary.DEFAULT, 0.16), color: theme.colors.primary.darker }}
+                          >
+                            <ExternalLinkIcon />
+                            Join Zoom
+                          </a>
+                        ) : (
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-semibold"
+                            style={{ backgroundColor: withAlpha(theme.colors.secondary.beige, 0.65), color: theme.colors.secondary.charcoal }}
+                          >
+                            <EditIcon />
+                            View
+                          </button>
+                        )}
+                      </td>
+                    </>
+                  );
+                }}
+                loading={loading}
+                loadingMessage="Loading appointments..."
+                emptyMessage="No appointments scheduled yet."
+              />
+            </SectionCard>
 
             {/* Revenue Overview */}
-            <div className="rounded-3xl p-6" style={componentStyles.card}>
-              <h2 className="mb-4 text-xl font-semibold" style={componentStyles.sectionTitle}>Revenue Overview</h2>
+            <SectionCard title="Revenue Overview" bodyClassName="space-y-0">
 
               <div className="mb-5">
                 <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.58) }}>Weekly</p>
@@ -511,17 +491,13 @@ export function Dashboard() {
                   <span className="text-xs font-medium">Paid sessions this month</span>
                 </div>
               </div>
-            </div>
+            </SectionCard>
           </section>
 
           {/* Todos & Unpaid Sessions */}
           <section className="grid gap-4 xl:grid-cols-2">
             {/* To-Do List */}
-            <div className="rounded-3xl p-6" style={componentStyles.card}>
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <h2 className="text-xl font-semibold" style={componentStyles.sectionTitle}>To-Do List</h2>
-               
-              </div>
+            <SectionCard title="To-Do List">
 
               <form onSubmit={handleCreateTodo} className="mb-5 flex gap-3">
                 <input
@@ -594,11 +570,10 @@ export function Dashboard() {
                   </p>
                 )}
               </div>
-            </div>
+            </SectionCard>
 
             {/* Unpaid Sessions */}
-            <div className="rounded-3xl p-6" style={componentStyles.card}>
-              <h2 className="mb-4 text-xl font-semibold" style={componentStyles.sectionTitle}>Unpaid Sessions</h2>
+            <SectionCard title="Unpaid Sessions">
               <div className="space-y-3">
                 {(loading ? [] : pendingPayments.slice(0, 5)).map((payment) => {
                   const appointmentClient = payment.appointment?.client;
@@ -620,57 +595,20 @@ export function Dashboard() {
                   </p>
                 )}
               </div>
-            </div>
+            </SectionCard>
           </section>
         </div>
 
-        {showDeleteTodoModal && (
-          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
-            <div className="w-full max-w-md rounded-3xl p-6" style={componentStyles.card}>
-              <h3 className="text-xl font-semibold" style={componentStyles.sectionTitle}>Delete Task</h3>
-              <p className="mt-3 text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.76) }}>
-                This action cannot be undone. Are you sure you want to delete this task?
-              </p>
-
-              {deleteTodoMessage && (
-                <div
-                  className="mt-4 rounded-xl px-3 py-2 text-sm"
-                  style={{
-                    backgroundColor: withAlpha(theme.colors.error.bg, 0.9),
-                    border: `1px solid ${theme.colors.error.border}`,
-                    color: theme.colors.error.text,
-                  }}
-                >
-                  {deleteTodoMessage}
-                </div>
-              )}
-
-              <div className="mt-6 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={closeDeleteTodoModal}
-                  disabled={deleteTodoBusy}
-                  className="rounded-xl px-4 py-2 text-sm font-medium"
-                  style={{ backgroundColor: withAlpha(theme.colors.secondary.beige, 0.7), color: theme.colors.secondary.charcoal }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirmDeleteTodo}
-                  disabled={deleteTodoBusy}
-                  className="rounded-xl px-4 py-2 text-sm font-semibold"
-                  style={{
-                    backgroundColor: deleteTodoBusy ? withAlpha(theme.colors.error.text, 0.6) : theme.colors.error.text,
-                    color: theme.colors.gray[50],
-                  }}
-                >
-                  {deleteTodoBusy ? 'Deleting...' : 'Delete Task'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <ConfirmModal
+          isOpen={showDeleteTodoModal}
+          title="Delete Task"
+          description="This action cannot be undone. Are you sure you want to delete this task?"
+          errorMessage={deleteTodoMessage}
+          onCancel={closeDeleteTodoModal}
+          onConfirm={handleConfirmDeleteTodo}
+          isBusy={deleteTodoBusy}
+          confirmLabel="Delete Task"
+        />
       </main>
     </div>
   );

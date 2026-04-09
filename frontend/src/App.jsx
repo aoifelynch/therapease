@@ -13,6 +13,7 @@ import { LandingPage } from './pages/Landing';
 import { Payments } from './pages/Payments';
 import { PaymentSuccess } from './pages/PaymentSuccess';
 import { PaymentCancelled } from './pages/PaymentCancelled';
+import { Settings } from './pages/Settings';
 import { ToastProvider } from './components/ToastProvider';
 
 function App() {
@@ -72,6 +73,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ClientProfile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <Settings />
                 </ProtectedRoute>
               }
             />

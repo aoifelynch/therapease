@@ -1,4 +1,5 @@
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Logo } from './Logo';
 import { theme } from '../utils/theme';
 import { withAlpha } from '../utils/formatters';
@@ -7,6 +8,9 @@ import { SettingsIcon } from '../utils/icons';
 
 export const AppSidebar = ({ activeNav, onNavSelect, user }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isSettingsPage = location.pathname === '/settings';
+  const [hoveredNav, setHoveredNav] = useState('');
 
   const handleNavClick = (label) => {
     onNavSelect?.(label);
@@ -28,7 +32,9 @@ export const AppSidebar = ({ activeNav, onNavSelect, user }) => {
 
     if (label === 'Clients') {
       navigate('/clients');
+      return;
     }
+
   };
 
   return (
@@ -47,15 +53,20 @@ export const AppSidebar = ({ activeNav, onNavSelect, user }) => {
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeNav === item.label;
+          const isHovered = hoveredNav === item.label;
 
           return (
             <button
               key={item.label}
               type="button"
               onClick={() => handleNavClick(item.label)}
+              onMouseEnter={() => setHoveredNav(item.label)}
+              onMouseLeave={() => setHoveredNav('')}
               className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-md font-medium transition-colors"
               style={{
-                backgroundColor: isActive ? withAlpha(theme.colors.primary.lighter, 0.45) : 'transparent',
+                backgroundColor: isActive
+                  ? withAlpha(theme.colors.primary.lighter, 0.45)
+                  : (isHovered ? withAlpha(theme.colors.primary.lighter, 0.27) : 'transparent'),
                 color: isActive ? theme.colors.primary.darker : withAlpha(theme.colors.secondary.charcoal, 0.7),
               }}
             >
@@ -69,7 +80,14 @@ export const AppSidebar = ({ activeNav, onNavSelect, user }) => {
       </nav>
 
       <div className="mt-6 border-t pt-4" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9) }}>
-        <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={() => navigate('/settings')}
+          className="flex w-full items-center justify-between gap-3 rounded-xl p-2 text-left transition-colors"
+          style={{
+            backgroundColor: isSettingsPage ? withAlpha(theme.colors.primary.lighter, 0.38) : 'transparent',
+          }}
+        >
           <div>
             <p className="text-sm font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
               {user?.name || 'Therapist'}
@@ -78,15 +96,23 @@ export const AppSidebar = ({ activeNav, onNavSelect, user }) => {
               {user?.email || 'Signed in'}
             </p>
           </div>
-          <button
-            type="button"
+          <span
             aria-label="Settings"
-            className="rounded-full p-2 transition-colors"
-            style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.55), backgroundColor: withAlpha(theme.colors.secondary.beige, 0.35) }}
+            className="relative rounded-full p-2 transition-colors"
+            style={{
+              color: isSettingsPage ? theme.colors.primary.DEFAULT : withAlpha(theme.colors.secondary.charcoal, 0.55),
+              backgroundColor: isSettingsPage ? withAlpha(theme.colors.primary.lighter, 0.48) : withAlpha(theme.colors.secondary.beige, 0.35),
+            }}
           >
             <SettingsIcon />
-          </button>
-        </div>
+            {isSettingsPage && (
+              <span
+                className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: theme.colors.primary.DEFAULT, border: `1px solid ${theme.colors.gray[50]}` }}
+              />
+            )}
+          </span>
+        </button>
       </div>
     </aside>
   );

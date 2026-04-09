@@ -1,5 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { theme } from '../utils/theme';
+import { withAlpha } from '../utils/formatters';
 
 export const ProtectedRoute = ({ children, allowIncomplete2FA = false }) => {
   const { isAuthenticated, loading, user } = useAuth();
@@ -7,7 +9,7 @@ export const ProtectedRoute = ({ children, allowIncomplete2FA = false }) => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
-        <p className="text-gray-600 text-lg">Loading...</p>
+        <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.7), fontFamily: theme.fonts.sans }}>Loading...</p>
       </div>
     );
   }

@@ -5,6 +5,7 @@ import { authAPI } from '../api/api';
 import { Logo } from '../components/Logo';
 import { FloatingLabel } from '../components/FloatingLabel';
 import { theme } from '../utils/theme';
+import { withAlpha } from '../utils/formatters';
 
 export const Register = () => {
   const [formData, setFormData] = useState({
@@ -133,7 +134,7 @@ export const Register = () => {
               fontFamily: theme.fonts.serif,
               letterSpacing: '0.04em',
               cursor: loading ? 'not-allowed' : 'pointer',
-              boxShadow: loading ? 'none' : '0 4px 14px rgba(107, 126, 90, 0.35)',
+              boxShadow: loading ? 'none' : `0 4px 14px ${withAlpha(theme.colors.primary.DEFAULT, 0.35)}`,
             }}
             onMouseEnter={e => { if (!loading) e.target.style.backgroundColor = theme.colors.primary.dark; }}
             onMouseLeave={e => { if (!loading) e.target.style.backgroundColor = theme.colors.primary.DEFAULT; }}
@@ -156,7 +157,7 @@ export const Register = () => {
         {/* Tagline / testimonial */}
         <div
           className="mt-10 rounded-2xl p-6 text-center"
-          style={{ backgroundColor: 'rgba(107,126,90,0.08)', border: '1px solid rgba(107,126,90,0.15)' }}
+          style={{ backgroundColor: withAlpha(theme.colors.primary.DEFAULT, 0.08), border: `1px solid ${withAlpha(theme.colors.primary.DEFAULT, 0.15)}` }}
         >
           <p className="text-sm leading-relaxed italic opacity-75" style={{ color: theme.colors.primary.darker, fontFamily: theme.fonts.serif }}>
             TherapEase helps therapists manage appointments, client records, payments and more — so you can focus on what matters most.

@@ -6,6 +6,13 @@ import interactionPlugin from '@fullcalendar/interaction';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import './calendar.css';
 import { AppSidebar } from '../components/AppSidebar';
+import { PageHeader } from '../components/PageHeader';
+import { PageTitleRow } from '../components/PageTitleRow';
+import { ErrorAlert } from '../components/ErrorAlert';
+import { FormModal } from '../components/FormModal';
+import { ConfirmModal } from '../components/ConfirmModal';
+import { useLiveNow } from '../hooks/useLiveNow';
+import { SectionCard } from '../components/SectionCard';
 import { appointmentsAPI, clientsAPI } from '../api/api';
 import { useAuth } from '../context/AuthContext';
 import { theme } from '../utils/theme';
@@ -136,18 +143,33 @@ const getViewRangeLabel = (rangeStart, rangeEnd) => {
   }).formatRange(rangeStart, inclusiveEnd);
 };
 
+const formatEventTime = (date) => {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+
+  return new Intl.DateTimeFormat('en-IE', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+};
+
 const renderCalendarEvent = (eventInfo) => {
   const eventType = eventInfo.event.extendedProps.type === 'online' ? 'Online' : 'In-Person';
   const isCancelled = eventInfo.event.extendedProps.status === 'cancelled';
+  const startTime = formatEventTime(eventInfo.event.start);
+  const endTime = formatEventTime(eventInfo.event.end);
+  const timeLabel = startTime && endTime ? `${startTime} - ${endTime}` : (eventInfo.timeText || '');
 
   return (
     <div className="therapease-event-content">
-      <p className="therapease-event-time">{eventInfo.timeText}</p>
+      <div className="therapease-event-meta">
+        <span className="therapease-event-time">{timeLabel}</span>
+        <span className="therapease-event-type">{eventType}</span>
+      </div>
       <p className="therapease-event-client">
         {eventInfo.event.title}
         {isCancelled ? ' (Cancelled)' : ''}
       </p>
-      <p className="therapease-event-type">{eventType}</p>
     </div>
   );
 };
@@ -172,7 +194,7 @@ export function Calendar() {
   );
 
   const [activeNav, setActiveNav] = useState('Calendar');
-  const [now, setNow] = useState(new Date());
+  const now = useLiveNow();
   const [appointments, setAppointments] = useState([]);
   const [clients, setClients] = useState([]);
   const [error, setError] = useState('');
@@ -201,7 +223,7 @@ export function Calendar() {
     status: 'upcoming',
     paymentLinkTiming: 'none',
     autoSendPaymentLink: false,
-    quotedAmount: '',
+    amount: '',
   });
   const [createForm, setCreateForm] = useState({
     clientId: '',
@@ -210,7 +232,7 @@ export function Calendar() {
     endTime: '',
     type: 'in-person',
     paymentLinkTiming: 'none',
-    quotedAmount: '',
+    amount: '',
   });
   const startTimeOptions = useMemo(() => buildTimeOptions({ startHour: 8, endHour: 21, minuteStep: 5 }), []);
   const endTimeOptions = useMemo(() => buildTimeOptions({ startHour: 8, endHour: 22, minuteStep: 5 }), []);
@@ -220,7 +242,7 @@ export function Calendar() {
   const getDefaultFeeByType = (type) => (type === 'online' ? defaultOnlineFee : defaultInPersonFee);
 
   const resetCreateForm = () => {
-    const defaultQuotedAmount = getDefaultFeeByType('in-person');
+    const defaultAmount = getDefaultFeeByType('in-person');
 
     setCreateForm({
       clientId: '',
@@ -229,7 +251,7 @@ export function Calendar() {
       endTime: '',
       type: 'in-person',
       paymentLinkTiming: 'none',
-      quotedAmount: defaultQuotedAmount,
+      amount: defaultAmount,
     });
     setCreateMessage('');
     setCreateTimeMessage('');
@@ -256,7 +278,7 @@ export function Calendar() {
       status: 'upcoming',
       paymentLinkTiming: 'none',
       autoSendPaymentLink: false,
-      quotedAmount: '',
+      amount: '',
     });
   };
 
@@ -280,7 +302,7 @@ export function Calendar() {
       status: 'upcoming',
       paymentLinkTiming: createForm.paymentLinkTiming,
       autoSendPaymentLink: createForm.paymentLinkTiming === 'before',
-      quotedAmount: createForm.paymentLinkTiming === 'none' ? undefined : Number(createForm.quotedAmount),
+      amount: createForm.paymentLinkTiming === 'none' ? undefined : Number(createForm.amount),
     };
 
     if (!payload.clientId || !payload.date || !payload.startTime || !payload.endTime || !payload.type) {
@@ -288,8 +310,8 @@ export function Calendar() {
       return;
     }
 
-    if (payload.paymentLinkTiming !== 'none' && (!Number.isFinite(payload.quotedAmount) || payload.quotedAmount <= 0)) {
-      setCreateMessage('Add a quoted amount greater than 0 when sending a payment link.');
+    if (payload.paymentLinkTiming !== 'none' && (!Number.isFinite(payload.amount) || payload.amount <= 0)) {
+      setCreateMessage('Add a  amount greater than 0 when sending a payment link.');
       return;
     }
 
@@ -373,7 +395,7 @@ export function Calendar() {
       status: appointment.status || 'upcoming',
       paymentLinkTiming: appointment.paymentLinkTiming || 'none',
       autoSendPaymentLink: Boolean(appointment.autoSendPaymentLink),
-      quotedAmount: appointment.quotedAmount ? Number(appointment.quotedAmount).toFixed(2) : '',
+      amount: appointment.amount ? Number(appointment.amount).toFixed(2) : '',
     });
     setAppointmentMessage('');
     setConfirmDeleteAppointment(false);
@@ -398,7 +420,7 @@ export function Calendar() {
       status: appointmentForm.status,
       paymentLinkTiming: appointmentForm.paymentLinkTiming,
       autoSendPaymentLink: appointmentForm.autoSendPaymentLink,
-      quotedAmount: appointmentForm.paymentLinkTiming === 'none' ? undefined : Number(appointmentForm.quotedAmount),
+      amount: appointmentForm.paymentLinkTiming === 'none' ? undefined : Number(appointmentForm.amount),
     };
 
     if (!payload.clientId || !payload.date || !payload.startTime || !payload.endTime || !payload.type) {
@@ -406,8 +428,8 @@ export function Calendar() {
       return;
     }
 
-    if (payload.paymentLinkTiming !== 'none' && (!Number.isFinite(payload.quotedAmount) || payload.quotedAmount <= 0)) {
-      setAppointmentMessage('Add a quoted amount greater than 0 when sending a payment link.');
+    if (payload.paymentLinkTiming !== 'none' && (!Number.isFinite(payload.amount) || payload.amount <= 0)) {
+      setAppointmentMessage('Add a  amount greater than 0 when sending a payment link.');
       return;
     }
 
@@ -469,11 +491,6 @@ export function Calendar() {
       setAppointmentDeleteBusy(false);
     }
   };
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 60000);
-    return () => window.clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     const loadCalendarData = async () => {
@@ -589,56 +606,38 @@ export function Calendar() {
       <AppSidebar activeNav={activeNav} onNavSelect={setActiveNav} user={user} />
 
       <main className="h-screen flex-1 overflow-y-auto">
-        <header
-          className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 px-6 py-4 md:px-8"
-          style={{
-            backgroundColor: withAlpha(theme.colors.gray[50], 0.92),
-            backdropFilter: 'blur(12px)',
-            borderBottom: `1px solid ${withAlpha(theme.colors.secondary.beige, 0.9)}`,
-          }}
-        >
-          <h1 className="text-xl font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
-            Welcome, {user?.name?.split(' ')[0] || 'there'}
-          </h1>
-          <span className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6) }}>
-            {formatLongDate(now)} {formatClock(now)}
-          </span>
-        </header>
+        <PageHeader userName={user?.name} now={now} />
 
-        <div className="space-y-5 px-6 py-6 md:px-8">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-3xl font-semibold leading-tight" style={{ color: theme.colors.secondary.charcoal }}>
-              Your Calendar
-            </h2>
-            <button
-              type="button"
-              onClick={() => {
-                setCreateMessage('');
-                resetCreateForm();
-                setShowCreateModal(true);
-              }}
-              className="rounded-2xl px-5 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90"
-              style={{
-                backgroundColor: theme.colors.primary.light,
-                color: theme.colors.gray[50],
-                boxShadow: `0 12px 20px ${withAlpha(theme.colors.primary.dark, 0.25)}`,
-              }}
-            >
-              Create Appointment
-            </button>
-          </div>
+        <div className="space-y-6 px-6 py-6 md:px-8">
+          <PageTitleRow
+            title="Calendar"
+            actions={(
+              <button
+                type="button"
+                onClick={() => {
+                  setCreateMessage('');
+                  resetCreateForm();
+                  setShowCreateModal(true);
+                }}
+                className="rounded-2xl px-5 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90"
+                style={{
+                  backgroundColor: theme.colors.primary.light,
+                  color: theme.colors.gray[50],
+                  boxShadow: `0 12px 20px ${withAlpha(theme.colors.primary.dark, 0.25)}`,
+                }}
+              >
+                Create Appointment
+              </button>
+            )}
+          />
 
-          {error && (
-            <div className="rounded-2xl px-4 py-3 text-sm" style={{ backgroundColor: theme.colors.error.bg, color: theme.colors.error.text, border: `1px solid ${theme.colors.error.border}` }}>
-              {error}
-            </div>
-          )}
+          <ErrorAlert message={error} />
 
-          <section className="rounded-3xl p-4 md:p-5" style={componentStyles.card}>
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <SectionCard paddingClassName="p-4 md:p-5" bodyClassName="space-y-0">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2">
                 <div
-                  className="inline-flex items-center rounded-xl border px-2 py-1"
+                  className="inline-flex items-center rounded-xl border px-2 py-1.5"
                   style={{
                     borderColor: withAlpha(theme.colors.secondary.beige, 0.9),
                     backgroundColor: withAlpha(theme.colors.gray[50], 0.85),
@@ -648,19 +647,19 @@ export function Calendar() {
                     type="button"
                     aria-label="Previous date range"
                     onClick={goToPreviousRange}
-                    className="rounded-lg px-2 py-1 text-sm font-semibold"
+                    className="rounded-lg px-2 py-1 text-sm font-semibold leading-none"
                     style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.7) }}
                   >
                     ‹
                   </button>
-                  <span className="px-2 text-sm font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
+                  <span className="px-2 text-sm font-semibold leading-none" style={{ color: theme.colors.secondary.charcoal }}>
                     {viewRangeLabel || 'Select range'}
                   </span>
                   <button
                     type="button"
                     aria-label="Next date range"
                     onClick={goToNextRange}
-                    className="rounded-lg px-2 py-1 text-sm font-semibold"
+                    className="rounded-lg px-2 py-1 text-sm font-semibold leading-none"
                     style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.7) }}
                   >
                     ›
@@ -687,11 +686,19 @@ export function Calendar() {
                   id="calendar-view"
                   value={calendarView}
                   onChange={(event) => handleViewChange(event.target.value)}
-                  className="rounded-xl border pl-3 pr-7 py-2 text-sm font-medium"
+                  className="rounded-xl border px-3 py-1.5 text-sm font-medium"
                   style={{
                     borderColor: withAlpha(theme.colors.secondary.beige, 0.92),
                     color: theme.colors.secondary.charcoal,
                     backgroundColor: withAlpha(theme.colors.gray[50], 0.9),
+                    appearance: 'none',
+                    WebkitAppearance: 'none',
+                    MozAppearance: 'none',
+                    paddingRight: '2.25rem',
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%236b7e5a' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 7.5l5 5 5-5'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 0.8rem center',
+                    backgroundSize: '0.9rem',
                   }}
                 >
                   <option value="dayGridMonth">Change View: Month</option>
@@ -706,7 +713,7 @@ export function Calendar() {
                   onChange={(event) => {
                     setAppointmentFilter(event.target.value || DEFAULT_FILTER);
                   }}
-                  className="rounded-xl border pl-3 pr-7 py-2 text-sm font-medium"
+                  className="rounded-xl border px-3 py-1.5 text-sm font-medium"
                   style={{
                     borderColor: withAlpha(theme.colors.secondary.beige, 0.92),
                     color: theme.colors.secondary.charcoal,
@@ -719,7 +726,7 @@ export function Calendar() {
                 </select>
               </div>
 
-              <div className="ml-auto flex flex-wrap items-center gap-3 rounded-xl px-3 py-1.5" style={{ backgroundColor: withAlpha(theme.colors.gray[50], 0.88), border: `1px solid ${withAlpha(theme.colors.secondary.beige, 0.9)}` }}>
+              <div className="ml-auto flex flex-wrap items-center gap-2 rounded-xl px-3 py-1.5" style={{ backgroundColor: withAlpha(theme.colors.gray[50], 0.88), border: `1px solid ${withAlpha(theme.colors.secondary.beige, 0.9)}` }}>
                 <span className="text-xs font-semibold uppercase tracking-[0.12em]" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.62) }}>
                   Key
                 </span>
@@ -755,6 +762,7 @@ export function Calendar() {
                 slotDuration="00:30:00"
                 snapDuration="00:15:00"
                 slotLabelInterval="01:00"
+                slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
                 dayHeaderFormat={{ weekday: 'short', day: 'numeric' }}
                 events={calendarEvents}
                 eventContent={renderCalendarEvent}
@@ -765,32 +773,17 @@ export function Calendar() {
                 editable={false}
               />
             </div>
-          </section>
+          </SectionCard>
         </div>
       </main>
 
-      {showAppointmentModal && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg rounded-3xl p-6" style={componentStyles.card}>
-            <div className="mb-5 flex items-center justify-between gap-3">
-              <h3 className="text-xl font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
-                Edit Appointment
-              </h3>
-              <button
-                type="button"
-                onClick={closeAppointmentModal}
-                disabled={appointmentBusy || appointmentDeleteBusy}
-                className="rounded-xl px-3 py-1.5 text-sm font-semibold"
-                style={{
-                  backgroundColor: withAlpha(theme.colors.secondary.beige, 0.7),
-                  color: theme.colors.secondary.charcoal,
-                }}
-              >
-                Close
-              </button>
-            </div>
-
-            <form className="space-y-4" onSubmit={handleUpdateAppointment}>
+      <FormModal
+        isOpen={showAppointmentModal}
+        title="Edit Appointment"
+        onClose={closeAppointmentModal}
+        closeDisabled={appointmentBusy || appointmentDeleteBusy}
+      >
+        <form className="space-y-4" onSubmit={handleUpdateAppointment}>
               <div>
                 <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
                   Client <span style={{ color: theme.colors.error.text }}>*</span>
@@ -889,7 +882,7 @@ export function Calendar() {
                       setAppointmentForm((current) => ({
                         ...current,
                         type: nextType,
-                        quotedAmount: current.quotedAmount || defaultFee,
+                        amount: current.amount || defaultFee,
                       }));
                     }}
                     required
@@ -930,7 +923,7 @@ export function Calendar() {
                         ...current,
                         paymentLinkTiming: nextTiming,
                         autoSendPaymentLink: nextTiming === 'none' ? false : current.autoSendPaymentLink,
-                        quotedAmount: nextTiming === 'none' ? '' : (current.quotedAmount || getDefaultFeeByType(current.type)),
+                        amount: nextTiming === 'none' ? '' : (current.amount || getDefaultFeeByType(current.type)),
                       }));
                     }}
                     className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
@@ -944,14 +937,14 @@ export function Calendar() {
 
                 <div>
                   <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-                    Quoted Amount (EUR)
+                     Amount (EUR)
                   </label>
                   <input
                     type="number"
                     min="0"
                     step="0.01"
-                    value={appointmentForm.quotedAmount}
-                    onChange={(event) => setAppointmentForm((current) => ({ ...current, quotedAmount: event.target.value }))}
+                    value={appointmentForm.amount}
+                    onChange={(event) => setAppointmentForm((current) => ({ ...current, amount: event.target.value }))}
                     disabled={appointmentForm.paymentLinkTiming === 'none'}
                     className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
                     style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.92), color: theme.colors.secondary.charcoal }}
@@ -1013,35 +1006,16 @@ export function Calendar() {
                   </button>
                 </div>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+        </form>
+      </FormModal>
 
-      {showCreateModal && (
-        <div
-          className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4"
-        >
-          <div className="w-full max-w-lg rounded-3xl p-6" style={componentStyles.card}>
-            <div className="mb-5 flex items-center justify-between gap-3">
-              <h3 className="text-xl font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
-                Create Appointment
-              </h3>
-              <button
-                type="button"
-                onClick={closeCreateModal}
-                disabled={createBusy}
-                className="rounded-xl px-3 py-1.5 text-sm font-semibold"
-                style={{
-                  backgroundColor: withAlpha(theme.colors.secondary.beige, 0.7),
-                  color: theme.colors.secondary.charcoal,
-                }}
-              >
-                Close
-              </button>
-            </div>
-
-            <form className="space-y-4" onSubmit={handleCreateAppointment}>
+      <FormModal
+        isOpen={showCreateModal}
+        title="Create Appointment"
+        onClose={closeCreateModal}
+        closeDisabled={createBusy}
+      >
+        <form className="space-y-4" onSubmit={handleCreateAppointment}>
               <div>
                 <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
                   Client <span style={{ color: theme.colors.error.text }}>*</span>
@@ -1153,7 +1127,7 @@ export function Calendar() {
                     setCreateForm((current) => ({
                       ...current,
                       type: nextType,
-                      quotedAmount: current.quotedAmount || defaultFee,
+                      amount: current.amount || defaultFee,
                     }));
                   }}
                   required
@@ -1177,7 +1151,7 @@ export function Calendar() {
                       setCreateForm((current) => ({
                         ...current,
                         paymentLinkTiming: nextTiming,
-                        quotedAmount: nextTiming === 'none' ? '' : (current.quotedAmount || getDefaultFeeByType(current.type)),
+                        amount: nextTiming === 'none' ? '' : (current.amount || getDefaultFeeByType(current.type)),
                       }));
                     }}
                     className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
@@ -1191,14 +1165,14 @@ export function Calendar() {
 
                 <div>
                   <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-                    Quoted Amount (EUR)
+                     Amount (EUR)
                   </label>
                   <input
                     type="number"
                     min="0"
                     step="0.01"
-                    value={createForm.quotedAmount}
-                    onChange={(event) => setCreateForm((current) => ({ ...current, quotedAmount: event.target.value }))}
+                    value={createForm.amount}
+                    onChange={(event) => setCreateForm((current) => ({ ...current, amount: event.target.value }))}
                     disabled={createForm.paymentLinkTiming === 'none'}
                     className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
                     style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.92), color: theme.colors.secondary.charcoal }}
@@ -1244,58 +1218,18 @@ export function Calendar() {
                   {createBusy ? 'Creating...' : 'Create Appointment'}
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+        </form>
+      </FormModal>
 
-      {showDeleteAppointmentModal && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-3xl p-6" style={componentStyles.card}>
-            <h3 className="text-xl font-semibold" style={componentStyles.sectionTitle}>Delete Appointment</h3>
-            <p className="mt-3 text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.76) }}>
-              This action cannot be undone. Are you sure you want to delete this appointment?
-            </p>
-
-            {deleteAppointmentMessage && (
-              <div
-                className="mt-4 rounded-xl px-3 py-2 text-sm"
-                style={{
-                  backgroundColor: withAlpha(theme.colors.error.bg, 0.9),
-                  border: `1px solid ${theme.colors.error.border}`,
-                  color: theme.colors.error.text,
-                }}
-              >
-                {deleteAppointmentMessage}
-              </div>
-            )}
-
-            <div className="mt-6 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={closeDeleteAppointmentModal}
-                disabled={appointmentDeleteBusy}
-                className="rounded-xl px-4 py-2 text-sm font-medium"
-                style={{ backgroundColor: withAlpha(theme.colors.secondary.beige, 0.7), color: theme.colors.secondary.charcoal }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmDeleteAppointment}
-                disabled={appointmentDeleteBusy}
-                className="rounded-xl px-4 py-2 text-sm font-semibold"
-                style={{
-                  backgroundColor: appointmentDeleteBusy ? withAlpha(theme.colors.error.text, 0.6) : theme.colors.error.text,
-                  color: theme.colors.gray[50],
-                }}
-              >
-                {appointmentDeleteBusy ? 'Deleting...' : 'Delete Appointment'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        isOpen={showDeleteAppointmentModal}
+        title="Delete Appointment"
+        errorMessage={deleteAppointmentMessage}
+        onCancel={closeDeleteAppointmentModal}
+        onConfirm={handleConfirmDeleteAppointment}
+        isBusy={appointmentDeleteBusy}
+        confirmLabel="Delete Appointment"
+      />
     </div>
   );
 }

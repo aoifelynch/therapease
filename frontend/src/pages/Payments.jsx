@@ -1,9 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AppSidebar } from '../components/AppSidebar';
+import { PageHeader } from '../components/PageHeader';
+import { PageTitleRow } from '../components/PageTitleRow';
+import { ErrorAlert } from '../components/ErrorAlert';
+import { useLiveNow } from '../hooks/useLiveNow';
+import { StatCard } from '../components/StatCard';
+import { AppDataTable } from '../components/AppDataTable';
 import { useAuth } from '../context/AuthContext';
 import { paymentsAPI } from '../api/api';
 import { theme } from '../utils/theme';
-import { withAlpha, formatLongDate, formatClock, formatCurrency, getClientName } from '../utils/formatters';
+import { withAlpha, formatCurrency, getClientName } from '../utils/formatters';
 import { componentStyles } from '../utils/componentStyles';
 import { ExternalLinkIcon } from '../utils/icons';
 
@@ -96,12 +102,16 @@ const groupMonthlyRevenueByWeek = (payments, now) => {
 	return weeks;
 };
 
-const buildSparklinePoints = (values) => {
+const buildSparklinePoints = (
+	values,
+	{
+		width = 360,
+		height = 170,
+		topPadding = 20,
+		bottomPadding = 28,
+	} = {},
+) => {
 	const maxValue = Math.max(...values, 1);
-	const width = 560;
-	const height = 220;
-	const topPadding = 24;
-	const bottomPadding = 40;
 	const drawableHeight = height - topPadding - bottomPadding;
 	const stepX = width / (values.length - 1 || 1);
 
@@ -138,12 +148,13 @@ const CardIcon = () => (
 
 export function Payments() {
 	const { user } = useAuth();
-	const [now, setNow] = useState(new Date());
+	const now = useLiveNow();
 	const [payments, setPayments] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
 	const [statusFilter, setStatusFilter] = useState('all');
 	const [searchTerm, setSearchTerm] = useState('');
+	const [revenueMonth, setRevenueMonth] = useState(() => getStartOfMonth(now));
 
 	useEffect(() => {
 		const loadPayments = async () => {
@@ -162,11 +173,6 @@ export function Payments() {
 		};
 
 		loadPayments();
-	}, []);
-
-	useEffect(() => {
-		const timer = window.setInterval(() => setNow(new Date()), 60000);
-		return () => window.clearInterval(timer);
 	}, []);
 
 	const dashboardStats = useMemo(() => {
@@ -198,8 +204,19 @@ export function Payments() {
 	}, [payments]);
 
 	const monthlyRevenueByWeek = useMemo(() => groupMonthlyRevenueByWeek(payments, now), [payments, now]);
-	const sparklinePoints = useMemo(() => buildSparklinePoints(monthlyRevenueByWeek), [monthlyRevenueByWeek]);
+	const selectedRevenueMonth = useMemo(() => getStartOfMonth(revenueMonth), [revenueMonth]);
+	const selectedRevenueMonthEnd = useMemo(() => getEndOfMonth(revenueMonth), [revenueMonth]);
+	const selectedMonthLabel = useMemo(() => new Intl.DateTimeFormat('en-IE', { month: 'long', year: 'numeric' }).format(selectedRevenueMonth), [selectedRevenueMonth]);
+	const previousRevenueMonth = () => {
+		setRevenueMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1));
+	};
+	const nextRevenueMonth = () => {
+		setRevenueMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1));
+	};
+	const revenueBySelectedMonth = useMemo(() => groupMonthlyRevenueByWeek(payments, selectedRevenueMonth), [payments, selectedRevenueMonth]);
+	const sparklinePoints = useMemo(() => buildSparklinePoints(revenueBySelectedMonth), [revenueBySelectedMonth]);
 	const sparklinePath = sparklinePoints.map((point) => `${point.x},${point.y}`).join(' ');
+	const maxWeeklyRevenue = useMemo(() => Math.max(...revenueBySelectedMonth, 1), [revenueBySelectedMonth]);
 
 	const filteredPayments = useMemo(() => {
 		const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -223,14 +240,14 @@ export function Payments() {
 			.sort((first, second) => new Date(second.createdAt || 0) - new Date(first.createdAt || 0));
 	}, [payments, searchTerm, statusFilter]);
 
-	const statCards = [
+	const summaryCards = [
 		{
 			id: 'paid-this-month',
 			label: 'Paid This Month',
 			value: formatCurrency(dashboardStats.paidThisMonthAmount),
 			sub: `${dashboardStats.paidCount} payment${dashboardStats.paidCount === 1 ? '' : 's'} completed`,
 			color: theme.colors.secondary.sage,
-			accent: theme.colors.primary.darker,
+			accent: theme.colors.primary.DEFAULT,
 		},
 		{
 			id: 'unpaid',
@@ -238,7 +255,7 @@ export function Payments() {
 			value: formatCurrency(dashboardStats.outstandingAmount),
 			sub: `${dashboardStats.unpaidCount} unpaid session${dashboardStats.unpaidCount === 1 ? '' : 's'}`,
 			color: theme.colors.secondary.beige,
-			accent: '#D97706',
+			accent: theme.colors.primary.dark,
 		},
 		{
 			id: 'paid-count',
@@ -253,7 +270,7 @@ export function Payments() {
 			label: 'Failed Payments',
 			value: String(dashboardStats.failedCount),
 			sub: 'Needs follow-up',
-			color: withAlpha(theme.colors.error.border, 0.7),
+			color: theme.colors.error.border,
 			accent: theme.colors.error.text,
 		},
 	];
@@ -269,35 +286,13 @@ export function Payments() {
 			<AppSidebar activeNav="Payments" onNavSelect={() => {}} user={user} />
 
 			<main className="h-screen flex-1 overflow-y-auto">
-				<header
-					className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 px-6 py-4 md:px-8"
-					style={{
-						backgroundColor: withAlpha(theme.colors.gray[50], 0.92),
-						backdropFilter: 'blur(12px)',
-						borderBottom: `1px solid ${withAlpha(theme.colors.secondary.beige, 0.9)}`,
-					}}
-				>
-					<h1 className="text-xl font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
-						Welcome, {user?.name?.split(' ')[0] || 'there'}
-					</h1>
-					<span className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6) }}>
-						{formatLongDate(now)} {formatClock(now)}
-					</span>
-				</header>
+				<PageHeader userName={user?.name} now={now} />
 
-				<div className="space-y-5 px-6 py-6 md:px-8">
-					<section className="rounded-3xl p-6" style={componentStyles.card}>
-						<div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-							<div>
-								<h2 className="text-2xl font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
-									Payments
-								</h2>
-								<p className="mt-1 text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.72) }}>
-									Track invoices, payment links, and Stripe outcomes in one place.
-								</p>
-							</div>
-
-							<div className="flex flex-col gap-2">
+				<div className="space-y-4 px-6 py-5 md:px-8">
+					<PageTitleRow
+						title="Payments"
+						actions={(
+							<div className="flex flex-wrap gap-2">
 								<button
 									type="button"
 									className="rounded-xl px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-90"
@@ -313,238 +308,234 @@ export function Payments() {
 									Create Invoice
 								</button>
 							</div>
-						</div>
-
-						{error && (
-							<div className="mb-4 rounded-2xl px-4 py-3 text-sm" style={{ backgroundColor: theme.colors.error.bg, color: theme.colors.error.text, border: `1px solid ${theme.colors.error.border}` }}>
-								{error}
-							</div>
 						)}
+					/>
 
-						<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-							{statCards.map((card) => (
-								<div key={card.id} className="overflow-hidden rounded-3xl" style={componentStyles.card}>
-									<div className="px-4 py-2" style={{ backgroundColor: card.color }}>
-										<p className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: theme.colors.secondary.charcoal }}>
-											{card.label}
-										</p>
-									</div>
-									<div className="px-4 py-5">
-										<p className="text-3xl font-semibold" style={{ color: card.accent }}>{card.value}</p>
-										<p className="mt-1 text-xs" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.58) }}>{card.sub}</p>
-									</div>
+					<ErrorAlert message={error} />
+
+					<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+						{summaryCards.map((card) => (
+							<StatCard key={card.id} {...card} />
+						))}
+					</div>
+
+					<div className="grid items-start gap-4 xl:grid-cols-[minmax(0,2.25fr)_minmax(280px,1fr)]">
+						<section className="rounded-3xl p-5" style={componentStyles.card}>
+							<div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+								<div>
+									<h2 className="text-xl font-semibold" style={{ color: theme.colors.secondary.charcoal }}>Payment Records</h2>
+									
 								</div>
-							))}
-						</div>
 
-						<div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1.1fr]">
-							<article className="rounded-2xl border p-5" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9), backgroundColor: theme.colors.gray[50] }}>
-								<h3 className="text-lg font-semibold" style={{ color: theme.colors.secondary.charcoal }}>Quick Actions</h3>
-								<div className="mt-5 grid grid-cols-3 gap-3">
-									{quickActions.map((action) => {
-										const ActionIcon = action.icon;
+								<div className="flex flex-wrap items-center gap-2">
+									<input
+										type="search"
+										value={searchTerm}
+										onChange={(event) => setSearchTerm(event.target.value)}
+										placeholder="Search client, date, status"
+										className="rounded-xl px-3 py-2 text-sm outline-none"
+										style={{
+											backgroundColor: withAlpha(theme.colors.secondary.cream, 0.95),
+											border: `1px solid ${withAlpha(theme.colors.secondary.beige, 0.95)}`,
+											color: theme.colors.secondary.charcoal,
+										}}
+									/>
+									<select
+										value={statusFilter}
+										onChange={(event) => setStatusFilter(event.target.value)}
+										className="rounded-xl px-3 py-2 text-sm outline-none"
+										style={{
+											backgroundColor: withAlpha(theme.colors.secondary.cream, 0.95),
+											border: `1px solid ${withAlpha(theme.colors.secondary.beige, 0.95)}`,
+											color: theme.colors.secondary.charcoal,
+										}}
+									>
+										<option value="all">All</option>
+										<option value="paid">Paid</option>
+										<option value="pending">Unpaid</option>
+										<option value="failed">Failed</option>
+									</select>
+								</div>
+							</div>
 
-										return (
-											<button
-												key={action.id}
-												type="button"
-												className="flex flex-col items-center justify-center rounded-2xl px-2 py-3 text-sm font-semibold transition-transform hover:-translate-y-0.5"
-												style={{ color: theme.colors.secondary.charcoal }}
-											>
-												<span
-													className="mb-3 inline-flex h-16 w-16 items-center justify-center rounded-full"
-													style={{ backgroundColor: withAlpha('#5D8B90', 0.95), color: theme.colors.gray[50] }}
-												>
-													<ActionIcon />
+							<AppDataTable
+								columns={[
+									{ key: 'client', label: 'Client', widthClassName: 'w-[19%]', headerClassName: 'pl-3' },
+									{ key: 'appointmentDate', label: 'Appointment Date', widthClassName: 'w-[19%]' },
+									{ key: 'amount', label: 'Amount', widthClassName: 'w-[14%]' },
+									{ key: 'status', label: 'Status', widthClassName: 'w-[15%]' },
+									{ key: 'created', label: 'Created', widthClassName: 'w-[17%]' },
+									{ key: 'actions', label: 'Actions', widthClassName: 'w-[16%]', headerClassName: 'pr-3' },
+								]}
+								rows={filteredPayments}
+								rowKey={(payment, index) => payment._id || payment.id || `payment-row-${index}`}
+								renderRow={(payment) => {
+									const normalizedStatus = normalizePaymentStatus(payment.status);
+
+									return (
+										<>
+											<td className="px-3 py-3" style={{ color: theme.colors.secondary.charcoal }}>
+												{getClientName(payment?.appointment?.client)}
+											</td>
+											<td className="px-3 py-3" style={{ color: theme.colors.secondary.charcoal }}>
+												{getAppointmentDateText(payment)}
+											</td>
+											<td className="px-3 py-3 font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
+												{formatCurrency(payment.amount)}
+											</td>
+											<td className="px-3 py-3">
+												<span className="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold" style={getStatusStyle(normalizedStatus)}>
+													{formatPaymentStatusLabel(normalizedStatus)}
 												</span>
-												{action.label}
-											</button>
-										);
-									})}
+											</td>
+											<td className="px-3 py-3">{getPaymentCreatedText(payment)}</td>
+											<td className="px-3 py-3">
+												{normalizedStatus === 'pending' ? (
+													<button
+														type="button"
+														className="rounded-lg px-2.5 py-1 text-xs font-semibold"
+														style={{ backgroundColor: withAlpha(theme.colors.error.bg, 0.9), color: theme.colors.error.text }}
+													>
+														Send Reminder
+													</button>
+												) : payment.receiptURL ? (
+													<a
+														href={payment.receiptURL}
+														target="_blank"
+														rel="noreferrer"
+														className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold"
+														style={{ backgroundColor: withAlpha(theme.colors.primary.DEFAULT, 0.14), color: theme.colors.primary.darker }}
+													>
+														View Receipt
+														<ExternalLinkIcon />
+													</a>
+												) : (
+													<span>None</span>
+												)}
+											</td>
+										</>
+									);
+								}}
+								loading={loading}
+								loadingMessage="Loading payments..."
+								emptyMessage="No payments found for the current filter."
+								minWidthClassName="min-w-[760px]"
+								headerCellClassName="px-3"
+							/>
+						</section>
+
+						<aside className="rounded-3xl p-4" style={componentStyles.card}>
+							<div className="mb-3 flex items-start justify-between gap-2">
+								<div>
+									<h2 className="text-xl font-semibold" style={{ color: theme.colors.secondary.charcoal }}>Revenue Overview</h2>
+									<p className="text-sm" style={{ color: componentStyles.subtleText }}>
+										{selectedMonthLabel}
+									</p>
 								</div>
-							</article>
-
-							<article className="rounded-2xl border p-5" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9), backgroundColor: theme.colors.gray[50] }}>
-								<div className="mb-3 flex items-center justify-between gap-3">
-									<h3 className="text-lg font-semibold" style={{ color: theme.colors.secondary.charcoal }}>Revenue Overview</h3>
-									<span className="rounded-full border px-3 py-1 text-xs font-semibold" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.92), color: withAlpha(theme.colors.secondary.charcoal, 0.72) }}>
-										{new Intl.DateTimeFormat('en-IE', { month: 'short' }).format(now)} 01 - {new Intl.DateTimeFormat('en-IE', { month: 'short', day: 'numeric' }).format(getEndOfMonth(now))}
-									</span>
+								<div className="flex items-center gap-1">
+									<button
+										type="button"
+										onClick={previousRevenueMonth}
+										className="inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-white/70"
+										style={{ borderColor: componentStyles.subtleBorder, color: theme.colors.secondary.charcoal }}
+									>
+										‹
+										Prev
+									</button>
+									<button
+										type="button"
+										onClick={nextRevenueMonth}
+										className="inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-white/70"
+										style={{ borderColor: componentStyles.subtleBorder, color: theme.colors.secondary.charcoal }}
+									>
+										Next
+										›
+									</button>
 								</div>
+							</div>
 
-								<div className="rounded-2xl border p-3" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.8), background: `linear-gradient(180deg, ${withAlpha(theme.colors.secondary.sage, 0.32)} 0%, ${withAlpha(theme.colors.gray[50], 0.98)} 65%)` }}>
-									<svg viewBox="0 0 560 220" className="w-full" aria-label="Monthly revenue overview">
-										<defs>
-											<linearGradient id="paymentsRevenueArea" x1="0" y1="0" x2="0" y2="1">
-												<stop offset="0%" stopColor={withAlpha(theme.colors.primary.DEFAULT, 0.38)} />
-												<stop offset="100%" stopColor={withAlpha(theme.colors.primary.DEFAULT, 0.03)} />
-											</linearGradient>
-										</defs>
+							<div className="grid grid-cols-2 gap-2">
+								<div className="rounded-xl border px-3 py-2" style={{ borderColor: componentStyles.lightBorder, backgroundColor: withAlpha(theme.colors.secondary.sage, 0.36) }}>
+									<p className="text-xs uppercase tracking-[0.12em]" style={{ color: componentStyles.subtleText }}>Collected</p>
+									<p className="mt-1 text-sm font-semibold" style={{ color: theme.colors.primary.DEFAULT }}>{formatCurrency(revenueBySelectedMonth.reduce((sum, amount) => sum + amount, 0))}</p>
+								</div>
+								<div className="rounded-xl border px-3 py-2" style={{ borderColor: componentStyles.lightBorder, backgroundColor: withAlpha(theme.colors.secondary.beige, 0.44) }}>
+									<p className="text-xs uppercase tracking-[0.12em]" style={{ color: componentStyles.subtleText }}>Outstanding</p>
+									<p className="mt-1 text-sm font-semibold" style={{ color: theme.colors.primary.dark }}>{formatCurrency(dashboardStats.outstandingAmount)}</p>
+								</div>
+							</div>
 
-										{[56, 104, 152].map((gridY) => (
-											<line
-												key={`grid-${gridY}`}
-												x1="0"
-												y1={gridY}
-												x2="560"
-												y2={gridY}
-												stroke={withAlpha(theme.colors.secondary.charcoal, 0.09)}
-												strokeWidth="1"
-											/>
-										))}
+							<div className="mt-3 rounded-2xl border p-2" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.8), background: `linear-gradient(180deg, ${withAlpha(theme.colors.secondary.sage, 0.32)} 0%, ${withAlpha(theme.colors.gray[50], 0.98)} 72%)` }}>
+								<svg viewBox="0 0 360 170" className="w-full" aria-label="Monthly revenue overview">
+									<defs>
+										<linearGradient id="paymentsRevenueArea" x1="0" y1="0" x2="0" y2="1">
+											<stop offset="0%" stopColor={withAlpha(theme.colors.primary.DEFAULT, 0.3)} />
+											<stop offset="100%" stopColor={withAlpha(theme.colors.primary.DEFAULT, 0.02)} />
+										</linearGradient>
+									</defs>
 
-										<line x1="0" y1="180" x2="560" y2="180" stroke={withAlpha(theme.colors.secondary.charcoal, 0.24)} strokeWidth="1.2" />
-
-										{sparklinePoints.length > 0 && (
-											<path
-												d={`M ${sparklinePoints[0].x} 180 L ${sparklinePath.replace(/,/g, ' ')} L ${sparklinePoints[sparklinePoints.length - 1].x} 180 Z`}
-												fill="url(#paymentsRevenueArea)"
-											/>
-										)}
-
-										<polyline
-											points={sparklinePath}
-											fill="none"
-											stroke={withAlpha(theme.colors.primary.DEFAULT, 0.95)}
-											strokeWidth="3.5"
-											strokeLinecap="round"
-											strokeLinejoin="round"
+									{[48, 82, 116].map((gridY) => (
+										<line
+											key={`grid-${gridY}`}
+											x1="0"
+											y1={gridY}
+											x2="360"
+											y2={gridY}
+											stroke={withAlpha(theme.colors.secondary.charcoal, 0.08)}
+											strokeWidth="1"
 										/>
+									))}
 
-										{sparklinePoints.map((point, index) => (
-											<g key={`pt-${index}`}>
-												<circle cx={point.x} cy={point.y} r="5" fill={theme.colors.gray[50]} stroke={withAlpha(theme.colors.primary.DEFAULT, 0.95)} strokeWidth="2.2" />
-												<text x={point.x} y={point.y - 12} textAnchor="middle" fontSize="11" fontWeight="600" fill={withAlpha(theme.colors.secondary.charcoal, 0.72)}>
-													{point.value > 0 ? formatCurrency(point.value) : '€0'}
-												</text>
-												<text x={point.x} y="205" textAnchor="middle" fontSize="11" fill={withAlpha(theme.colors.secondary.charcoal, 0.56)}>
-													Week {index + 1}
-												</text>
-											</g>
-										))}
-									</svg>
-								</div>
-							</article>
-						</div>
-					</section>
+									<line x1="0" y1="142" x2="360" y2="142" stroke={withAlpha(theme.colors.secondary.charcoal, 0.2)} strokeWidth="1.1" />
 
-					<section className="rounded-3xl p-5" style={componentStyles.card}>
-						<div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-							<h3 className="text-lg font-semibold" style={{ color: theme.colors.secondary.charcoal }}>Payment Links</h3>
+									{sparklinePoints.length > 0 && (
+										<path
+											d={`M ${sparklinePoints[0].x} 142 L ${sparklinePath.replace(/,/g, ' ')} L ${sparklinePoints[sparklinePoints.length - 1].x} 142 Z`}
+											fill="url(#paymentsRevenueArea)"
+										/>
+									)}
 
-							<div className="flex flex-wrap items-center gap-2">
-								<input
-									type="search"
-									value={searchTerm}
-									onChange={(event) => setSearchTerm(event.target.value)}
-									placeholder="Search client, date, status"
-									className="rounded-xl border bg-white px-3 py-2 text-sm outline-none"
-									style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-								/>
-								<select
-									value={statusFilter}
-									onChange={(event) => setStatusFilter(event.target.value)}
-									className="rounded-xl border bg-white px-3 py-2 text-sm outline-none"
-									style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-								>
-									<option value="all">All</option>
-									<option value="paid">Paid</option>
-									<option value="pending">Unpaid</option>
-									<option value="failed">Failed</option>
-								</select>
+									<polyline
+										points={sparklinePath}
+										fill="none"
+										stroke={withAlpha(theme.colors.primary.DEFAULT, 0.95)}
+										strokeWidth="3"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+									/>
+
+									{sparklinePoints.map((point, index) => (
+										<g key={`pt-${index}`}>
+											<circle cx={point.x} cy={point.y} r="3.5" fill={theme.colors.gray[50]} stroke={withAlpha(theme.colors.primary.DEFAULT, 0.9)} strokeWidth="1.7" />
+											<text x={point.x} y="163" textAnchor="middle" fontSize="12" fill={withAlpha(theme.colors.secondary.charcoal, 0.62)}>
+												W{index + 1}
+											</text>
+										</g>
+									))}
+								</svg>
 							</div>
-						</div>
 
-						{loading ? (
-							<p className="py-6 text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.65) }}>
-								Loading payments...
-							</p>
-						) : filteredPayments.length === 0 ? (
-							<p className="py-6 text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.65) }}>
-								No payments found for the current filter.
-							</p>
-						) : (
-							<div className="overflow-x-auto">
-								<table className="min-w-full border-separate border-spacing-0">
-									<thead>
-										<tr>
-											<th className="border-b px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.12em]" style={{ borderColor: componentStyles.lightBorder, color: withAlpha(theme.colors.secondary.charcoal, 0.58) }}>
-												Client
-											</th>
-											<th className="border-b px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.12em]" style={{ borderColor: componentStyles.lightBorder, color: withAlpha(theme.colors.secondary.charcoal, 0.58) }}>
-												Appointment Date
-											</th>
-											<th className="border-b px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.12em]" style={{ borderColor: componentStyles.lightBorder, color: withAlpha(theme.colors.secondary.charcoal, 0.58) }}>
-												Amount
-											</th>
-											<th className="border-b px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.12em]" style={{ borderColor: componentStyles.lightBorder, color: withAlpha(theme.colors.secondary.charcoal, 0.58) }}>
-												Status
-											</th>
-											<th className="border-b px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.12em]" style={{ borderColor: componentStyles.lightBorder, color: withAlpha(theme.colors.secondary.charcoal, 0.58) }}>
-												Created
-											</th>
-											<th className="border-b px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.12em]" style={{ borderColor: componentStyles.lightBorder, color: withAlpha(theme.colors.secondary.charcoal, 0.58) }}>
-												Actions
-											</th>
-										</tr>
-									</thead>
-									<tbody>
-										{filteredPayments.map((payment, index) => {
-											const normalizedStatus = normalizePaymentStatus(payment.status);
-
-											return (
-												<tr key={payment._id || payment.id || `payment-row-${index}`} style={{ backgroundColor: componentStyles.getZebraRow(index) }}>
-													<td className="px-3 py-3 text-sm" style={{ color: theme.colors.secondary.charcoal }}>
-														{getClientName(payment?.appointment?.client)}
-													</td>
-													<td className="px-3 py-3 text-sm" style={{ color: theme.colors.secondary.charcoal }}>
-														{getAppointmentDateText(payment)}
-													</td>
-													<td className="px-3 py-3 text-sm font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
-														{formatCurrency(payment.amount)}
-													</td>
-													<td className="px-3 py-3 text-sm">
-														<span className="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold" style={getStatusStyle(normalizedStatus)}>
-															{formatPaymentStatusLabel(normalizedStatus)}
-														</span>
-													</td>
-													<td className="px-3 py-3 text-sm">
-														{getPaymentCreatedText(payment)}
-													</td>
-													<td className="px-3 py-3 text-sm">
-														{normalizedStatus === 'pending' ? (
-															<button
-																type="button"
-																className="rounded-lg px-2.5 py-1 text-xs font-semibold"
-																style={{ backgroundColor: withAlpha('#F59E0B', 0.18), color: '#D97706' }}
-															>
-																Send Reminder
-															</button>
-														) : payment.receiptURL ? (
-															<a
-																href={payment.receiptURL}
-																target="_blank"
-																rel="noreferrer"
-																className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold"
-																style={{ backgroundColor: withAlpha('#4F46E5', 0.14), color: '#4338CA' }}
-															>
-																View Receipt
-																<ExternalLinkIcon />
-															</a>
-														) : (
-															<span className="text-sm">
-																None
-															</span>
-														)}
-													</td>
-												</tr>
-											);
-										})}
-									</tbody>
-								</table>
+							<div className="mt-3 space-y-2">
+								{revenueBySelectedMonth.map((amount, index) => (
+									<div key={`week-summary-${index}`} className="space-y-1">
+										<div className="flex items-center justify-between text-xs">
+											<span style={{ color: componentStyles.subtleText }}>Week {index + 1}</span>
+											<span className="font-semibold" style={{ color: theme.colors.secondary.charcoal }}>{formatCurrency(amount)}</span>
+										</div>
+										<div className="h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: withAlpha(theme.colors.secondary.beige, 0.55) }}>
+											<div
+												className="h-full rounded-full"
+												style={{
+													width: `${Math.max(8, (amount / maxWeeklyRevenue) * 100)}%`,
+													backgroundColor: withAlpha(theme.colors.primary.DEFAULT, 0.86),
+												}}
+											/>
+										</div>
+									</div>
+								))}
 							</div>
-						)}
-					</section>
+						</aside>
+					</div>
 				</div>
 			</main>
 		</div>

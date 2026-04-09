@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { theme } from '../utils/theme';
+import { withAlpha } from '../utils/formatters';
 
 export const FloatingLabel = ({ id, name, type = 'text', value, onChange, label, placeholder }) => {
   const [focused, setFocused] = useState(false);
@@ -35,7 +36,7 @@ export const FloatingLabel = ({ id, name, type = 'text', value, onChange, label,
         style={{
           padding: active ? '22px 16px 8px' : '16px',
           borderColor: focused ? theme.colors.primary.DEFAULT : theme.colors.secondary.beige,
-          boxShadow: focused ? '0 0 0 3px rgba(107, 126, 90, 0.1)' : 'none',
+          boxShadow: focused ? `0 0 0 3px ${withAlpha(theme.colors.primary.DEFAULT, 0.1)}` : 'none',
           fontSize: '14px',
           color: theme.colors.gray[700],
           fontFamily: theme.fonts.serif,
