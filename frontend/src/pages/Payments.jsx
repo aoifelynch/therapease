@@ -1,21 +1,38 @@
 import { useEffect, useMemo, useState } from 'react';
+import {
+	BarElement,
+	CategoryScale,
+	Chart as ChartJS,
+	Filler,
+	Legend,
+	LinearScale,
+	Tooltip,
+} from 'chart.js';
+import { Bar } from 'react-chartjs-2';
 import { AppSidebar } from '../components/AppSidebar';
 import { PageHeader } from '../components/PageHeader';
 import { PageTitleRow } from '../components/PageTitleRow';
 import { ErrorAlert } from '../components/ErrorAlert';
+import { FormModal } from '../components/FormModal';
 import { useLiveNow } from '../hooks/useLiveNow';
 import { StatCard } from '../components/StatCard';
 import { AppDataTable } from '../components/AppDataTable';
 import { useAuth } from '../context/AuthContext';
-import { paymentsAPI } from '../api/api';
+import { clientsAPI, paymentsAPI } from '../api/api';
 import { theme } from '../utils/theme';
 import { withAlpha, formatCurrency, getClientName } from '../utils/formatters';
 import { componentStyles } from '../utils/componentStyles';
 import { ExternalLinkIcon } from '../utils/icons';
 
+ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend, Filler);
+
 const getStartOfMonth = (date) => new Date(date.getFullYear(), date.getMonth(), 1);
 
 const getEndOfMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0);
+
+const getStartOfYear = (date) => new Date(date.getFullYear(), 0, 1);
+
+const getEndOfYear = (date) => new Date(date.getFullYear(), 11, 31, 23, 59, 59, 999);
 
 const normalizePaymentStatus = (value) => {
 	const status = String(value || '').toLowerCase();
@@ -82,6 +99,8 @@ const getPaymentCreatedText = (payment) => {
 	}).format(parsed);
 };
 
+const getPaymentClient = (payment) => payment?.appointment?.client || payment?.client || null;
+
 const groupMonthlyRevenueByWeek = (payments, now) => {
 	const monthStart = getStartOfMonth(now);
 	const monthEnd = getEndOfMonth(now);
@@ -102,25 +121,22 @@ const groupMonthlyRevenueByWeek = (payments, now) => {
 	return weeks;
 };
 
-const buildSparklinePoints = (
-	values,
-	{
-		width = 360,
-		height = 170,
-		topPadding = 20,
-		bottomPadding = 28,
-	} = {},
-) => {
-	const maxValue = Math.max(...values, 1);
-	const drawableHeight = height - topPadding - bottomPadding;
-	const stepX = width / (values.length - 1 || 1);
+const groupYearlyRevenueByMonth = (payments, yearDate) => {
+	const yearStart = getStartOfYear(yearDate);
+	const yearEnd = getEndOfYear(yearDate);
+	const months = Array(12).fill(0);
 
-	return values.map((value, index) => {
-		const x = index * stepX;
-		const normalized = value / maxValue;
-		const y = (height - bottomPadding) - (normalized * drawableHeight);
-		return { x, y, value };
+	payments.forEach((payment) => {
+		if (normalizePaymentStatus(payment.status) !== 'paid') return;
+
+		const createdAt = new Date(payment.createdAt);
+		if (Number.isNaN(createdAt.getTime())) return;
+		if (createdAt < yearStart || createdAt > yearEnd) return;
+
+		months[createdAt.getMonth()] += Number(payment.amount || 0);
 	});
+
+	return months;
 };
 
 const ReceiptIcon = () => (
@@ -155,6 +171,15 @@ export function Payments() {
 	const [statusFilter, setStatusFilter] = useState('all');
 	const [searchTerm, setSearchTerm] = useState('');
 	const [revenueMonth, setRevenueMonth] = useState(() => getStartOfMonth(now));
+	const [revenueView, setRevenueView] = useState('monthly');
+	const [clients, setClients] = useState([]);
+	const [showCreateLinkModal, setShowCreateLinkModal] = useState(false);
+	const [createLinkBusy, setCreateLinkBusy] = useState(false);
+	const [createLinkMessage, setCreateLinkMessage] = useState('');
+	const [createLinkForm, setCreateLinkForm] = useState({
+		clientId: '',
+		amount: '',
+	});
 
 	useEffect(() => {
 		const loadPayments = async () => {
@@ -162,11 +187,16 @@ export function Payments() {
 			setError('');
 
 			try {
-				const response = await paymentsAPI.getAll();
-				setPayments(response.data || []);
+				const [paymentsResponse, clientsResponse] = await Promise.all([
+					paymentsAPI.getAll(),
+					clientsAPI.getAll(),
+				]);
+				setPayments(paymentsResponse.data || []);
+				setClients(clientsResponse.data || []);
 			} catch (requestError) {
 				setError(requestError.response?.data?.message || requestError.message || 'Unable to load payments');
 				setPayments([]);
+				setClients([]);
 			} finally {
 				setLoading(false);
 			}
@@ -174,6 +204,56 @@ export function Payments() {
 
 		loadPayments();
 	}, []);
+
+	const openCreateLinkModal = () => {
+		setCreateLinkForm({ clientId: '', amount: '' });
+		setCreateLinkMessage('');
+		setShowCreateLinkModal(true);
+	};
+
+	const closeCreateLinkModal = () => {
+		if (createLinkBusy) return;
+		setShowCreateLinkModal(false);
+		setCreateLinkMessage('');
+	};
+
+	const handleCreatePaymentLink = async (event) => {
+		event.preventDefault();
+		setCreateLinkMessage('');
+
+		const normalizedClientId = String(createLinkForm.clientId || '').trim();
+		const normalizedAmount = Number(createLinkForm.amount);
+
+		if (!normalizedClientId) {
+			setCreateLinkMessage('Please select a client.');
+			return;
+		}
+
+		if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+			setCreateLinkMessage('Please enter an amount greater than 0.');
+			return;
+		}
+
+		setCreateLinkBusy(true);
+
+		try {
+			const response = await paymentsAPI.createSession({
+				clientId: normalizedClientId,
+				amount: normalizedAmount,
+				sendNow: true,
+			});
+
+			setCreateLinkMessage('Payment link sent successfully.');
+
+
+			setShowCreateLinkModal(false);
+			setCreateLinkForm({ clientId: '', amount: '' });
+		} catch (requestError) {
+			setCreateLinkMessage(requestError.response?.data?.message || requestError.message || 'Unable to create payment link');
+		} finally {
+			setCreateLinkBusy(false);
+		}
+	};
 
 	const dashboardStats = useMemo(() => {
 		const monthStart = getStartOfMonth(now);
@@ -203,20 +283,103 @@ export function Payments() {
 		};
 	}, [payments]);
 
-	const monthlyRevenueByWeek = useMemo(() => groupMonthlyRevenueByWeek(payments, now), [payments, now]);
 	const selectedRevenueMonth = useMemo(() => getStartOfMonth(revenueMonth), [revenueMonth]);
-	const selectedRevenueMonthEnd = useMemo(() => getEndOfMonth(revenueMonth), [revenueMonth]);
-	const selectedMonthLabel = useMemo(() => new Intl.DateTimeFormat('en-IE', { month: 'long', year: 'numeric' }).format(selectedRevenueMonth), [selectedRevenueMonth]);
-	const previousRevenueMonth = () => {
-		setRevenueMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1));
+	const selectedRevenueYear = useMemo(() => getStartOfYear(revenueMonth), [revenueMonth]);
+	const selectedRevenueLabel = useMemo(() => (
+		revenueView === 'monthly'
+			? new Intl.DateTimeFormat('en-IE', { month: 'long', year: 'numeric' }).format(selectedRevenueMonth)
+			: new Intl.DateTimeFormat('en-IE', { year: 'numeric' }).format(selectedRevenueYear)
+	), [revenueView, selectedRevenueMonth, selectedRevenueYear]);
+	const revenuePeriodLabels = useMemo(() => (
+		revenueView === 'monthly'
+			? ['W1', 'W2', 'W3', 'W4', 'W5']
+			: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+	), [revenueView]);
+	const revenuePeriodSummaryLabels = useMemo(() => (
+		revenueView === 'monthly'
+			? ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5']
+			: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+	), [revenueView]);
+	const previousRevenuePeriod = () => {
+		setRevenueMonth((current) => new Date(current.getFullYear(), current.getMonth() - (revenueView === 'monthly' ? 1 : 12), 1));
 	};
-	const nextRevenueMonth = () => {
-		setRevenueMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1));
+	const nextRevenuePeriod = () => {
+		setRevenueMonth((current) => new Date(current.getFullYear(), current.getMonth() + (revenueView === 'monthly' ? 1 : 12), 1));
 	};
-	const revenueBySelectedMonth = useMemo(() => groupMonthlyRevenueByWeek(payments, selectedRevenueMonth), [payments, selectedRevenueMonth]);
-	const sparklinePoints = useMemo(() => buildSparklinePoints(revenueBySelectedMonth), [revenueBySelectedMonth]);
-	const sparklinePath = sparklinePoints.map((point) => `${point.x},${point.y}`).join(' ');
-	const maxWeeklyRevenue = useMemo(() => Math.max(...revenueBySelectedMonth, 1), [revenueBySelectedMonth]);
+	const revenueSeries = useMemo(() => (
+		revenueView === 'monthly'
+			? groupMonthlyRevenueByWeek(payments, selectedRevenueMonth)
+			: groupYearlyRevenueByMonth(payments, selectedRevenueYear)
+	), [payments, revenueView, selectedRevenueMonth, selectedRevenueYear]);
+	const revenueChartData = useMemo(() => ({
+		labels: revenuePeriodLabels,
+		datasets: [
+			{
+				label: revenueView === 'monthly' ? 'Collected' : 'Collected by Month',
+				data: revenueSeries,
+				borderRadius: 14,
+				borderSkipped: false,
+				backgroundColor: revenueSeries.map((amount, index) => (
+					index === revenueSeries.length - 1
+						? withAlpha(theme.colors.primary.DEFAULT, 0.95)
+						: withAlpha(theme.colors.primary.DEFAULT, 0.72)
+				)),
+				borderColor: withAlpha(theme.colors.primary.DEFAULT, 0.65),
+				barPercentage: 0.72,
+				categoryPercentage: 0.74,
+			},
+		],
+	}), [revenuePeriodLabels, revenueSeries, revenueView]);
+
+	const revenueChartOptions = useMemo(() => ({
+		responsive: true,
+		maintainAspectRatio: false,
+		plugins: {
+			legend: {
+				display: false,
+			},
+			tooltip: {
+				backgroundColor: theme.colors.secondary.charcoal,
+				padding: 12,
+				cornerRadius: 14,
+				displayColors: false,
+				callbacks: {
+					title: (items) => `Week ${Number(items?.[0]?.dataIndex || 0) + 1}`,
+					label: (context) => formatCurrency(context.raw || 0),
+				},
+			},
+		},
+		scales: {
+			x: {
+				grid: {
+					display: false,
+				},
+				ticks: {
+					color: componentStyles.subtleText,
+					font: {
+						size: 12,
+						weight: '600',
+					},
+				},
+			},
+			y: {
+				beginAtZero: true,
+				grid: {
+					color: withAlpha(theme.colors.secondary.charcoal, 0.08),
+				},
+				ticks: {
+					color: componentStyles.subtleText,
+					callback: (value) => formatCurrency(value),
+					font: {
+						size: 12,
+						weight: '600',
+					},
+				},
+			},
+		},
+	}), []);
+
+	const maxWeeklyRevenue = useMemo(() => Math.max(...revenueSeries, 1), [revenueSeries]);
 
 	const filteredPayments = useMemo(() => {
 		const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -229,7 +392,7 @@ export function Payments() {
 			.filter((payment) => {
 				if (!normalizedSearch) return true;
 
-				const clientName = getClientName(payment?.appointment?.client).toLowerCase();
+				const clientName = getClientName(getPaymentClient(payment)).toLowerCase();
 				const appointmentDate = getAppointmentDateText(payment).toLowerCase();
 				const status = formatPaymentStatusLabel(payment.status).toLowerCase();
 
@@ -295,6 +458,7 @@ export function Payments() {
 							<div className="flex flex-wrap gap-2">
 								<button
 									type="button"
+									onClick={openCreateLinkModal}
 									className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-90"
 									style={{ backgroundColor: theme.colors.primary.light, color: theme.colors.gray[50] }}
 								>
@@ -369,7 +533,7 @@ export function Payments() {
 									return (
 										<>
 											<td className="px-3 py-3" style={{ color: theme.colors.secondary.charcoal }}>
-												{getClientName(payment?.appointment?.client)}
+												{getClientName(getPaymentClient(payment))}
 											</td>
 											<td className="px-3 py-3" style={{ color: theme.colors.secondary.charcoal }}>
 												{getAppointmentDateText(payment)}
@@ -423,13 +587,37 @@ export function Payments() {
 								<div>
 									<h2 className="text-xl font-semibold" style={{ color: theme.colors.secondary.charcoal }}>Revenue Overview</h2>
 									<p className="text-sm" style={{ color: componentStyles.subtleText }}>
-										{selectedMonthLabel}
+										{selectedRevenueLabel}
 									</p>
 								</div>
-								<div className="flex items-center gap-1">
+								<div className="flex flex-wrap items-center gap-1">
+									<div className="mr-2 inline-flex rounded-full border p-1" style={{ borderColor: componentStyles.subtleBorder, backgroundColor: withAlpha(theme.colors.gray[50], 0.75) }}>
+										<button
+											type="button"
+											onClick={() => setRevenueView('monthly')}
+											className="rounded-full px-3 py-1.5 text-xs font-semibold transition-colors"
+											style={{
+												backgroundColor: revenueView === 'monthly' ? theme.colors.primary.DEFAULT : 'transparent',
+												color: revenueView === 'monthly' ? theme.colors.gray[50] : theme.colors.secondary.charcoal,
+											}}
+										>
+											Monthly
+										</button>
+										<button
+											type="button"
+											onClick={() => setRevenueView('yearly')}
+											className="rounded-full px-3 py-1.5 text-xs font-semibold transition-colors"
+											style={{
+												backgroundColor: revenueView === 'yearly' ? theme.colors.primary.DEFAULT : 'transparent',
+												color: revenueView === 'yearly' ? theme.colors.gray[50] : theme.colors.secondary.charcoal,
+											}}
+										>
+											Yearly
+										</button>
+									</div>
 									<button
 										type="button"
-										onClick={previousRevenueMonth}
+										onClick={previousRevenuePeriod}
 										className="inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-white/70"
 										style={{ borderColor: componentStyles.subtleBorder, color: theme.colors.secondary.charcoal }}
 									>
@@ -438,7 +626,7 @@ export function Payments() {
 									</button>
 									<button
 										type="button"
-										onClick={nextRevenueMonth}
+										onClick={nextRevenuePeriod}
 										className="inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-white/70"
 										style={{ borderColor: componentStyles.subtleBorder, color: theme.colors.secondary.charcoal }}
 									>
@@ -448,72 +636,24 @@ export function Payments() {
 								</div>
 							</div>
 
-							<div className="grid grid-cols-2 gap-2">
-								<div className="rounded-xl border px-3 py-2" style={{ borderColor: componentStyles.lightBorder, backgroundColor: withAlpha(theme.colors.secondary.sage, 0.36) }}>
-									<p className="text-xs uppercase tracking-[0.12em]" style={{ color: componentStyles.subtleText }}>Collected</p>
-									<p className="mt-1 text-sm font-semibold" style={{ color: theme.colors.primary.DEFAULT }}>{formatCurrency(revenueBySelectedMonth.reduce((sum, amount) => sum + amount, 0))}</p>
-								</div>
+							<div className="grid grid-cols-1 gap-2">
 								<div className="rounded-xl border px-3 py-2" style={{ borderColor: componentStyles.lightBorder, backgroundColor: withAlpha(theme.colors.secondary.beige, 0.44) }}>
 									<p className="text-xs uppercase tracking-[0.12em]" style={{ color: componentStyles.subtleText }}>Outstanding</p>
 									<p className="mt-1 text-sm font-semibold" style={{ color: theme.colors.primary.dark }}>{formatCurrency(dashboardStats.outstandingAmount)}</p>
 								</div>
 							</div>
 
-							<div className="mt-3 rounded-2xl border p-2" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.8), background: `linear-gradient(180deg, ${withAlpha(theme.colors.secondary.sage, 0.32)} 0%, ${withAlpha(theme.colors.gray[50], 0.98)} 72%)` }}>
-								<svg viewBox="0 0 360 170" className="w-full" aria-label="Monthly revenue overview">
-									<defs>
-										<linearGradient id="paymentsRevenueArea" x1="0" y1="0" x2="0" y2="1">
-											<stop offset="0%" stopColor={withAlpha(theme.colors.primary.DEFAULT, 0.3)} />
-											<stop offset="100%" stopColor={withAlpha(theme.colors.primary.DEFAULT, 0.02)} />
-										</linearGradient>
-									</defs>
-
-									{[48, 82, 116].map((gridY) => (
-										<line
-											key={`grid-${gridY}`}
-											x1="0"
-											y1={gridY}
-											x2="360"
-											y2={gridY}
-											stroke={withAlpha(theme.colors.secondary.charcoal, 0.08)}
-											strokeWidth="1"
-										/>
-									))}
-
-									<line x1="0" y1="142" x2="360" y2="142" stroke={withAlpha(theme.colors.secondary.charcoal, 0.2)} strokeWidth="1.1" />
-
-									{sparklinePoints.length > 0 && (
-										<path
-											d={`M ${sparklinePoints[0].x} 142 L ${sparklinePath.replace(/,/g, ' ')} L ${sparklinePoints[sparklinePoints.length - 1].x} 142 Z`}
-											fill="url(#paymentsRevenueArea)"
-										/>
-									)}
-
-									<polyline
-										points={sparklinePath}
-										fill="none"
-										stroke={withAlpha(theme.colors.primary.DEFAULT, 0.95)}
-										strokeWidth="3"
-										strokeLinecap="round"
-										strokeLinejoin="round"
-									/>
-
-									{sparklinePoints.map((point, index) => (
-										<g key={`pt-${index}`}>
-											<circle cx={point.x} cy={point.y} r="3.5" fill={theme.colors.gray[50]} stroke={withAlpha(theme.colors.primary.DEFAULT, 0.9)} strokeWidth="1.7" />
-											<text x={point.x} y="163" textAnchor="middle" fontSize="12" fill={withAlpha(theme.colors.secondary.charcoal, 0.62)}>
-												W{index + 1}
-											</text>
-										</g>
-									))}
-								</svg>
+							<div className="mt-3 rounded-2xl border p-4" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.8), background: `linear-gradient(180deg, ${withAlpha(theme.colors.secondary.sage, 0.24)} 0%, ${withAlpha(theme.colors.gray[50], 0.98)} 72%)` }}>
+								<div className="h-[260px]">
+									<Bar data={revenueChartData} options={revenueChartOptions} />
+								</div>
 							</div>
 
 							<div className="mt-3 space-y-2">
-								{revenueBySelectedMonth.map((amount, index) => (
+								{revenueSeries.map((amount, index) => (
 									<div key={`week-summary-${index}`} className="space-y-1">
 										<div className="flex items-center justify-between text-xs">
-											<span style={{ color: componentStyles.subtleText }}>Week {index + 1}</span>
+											<span style={{ color: componentStyles.subtleText }}>{revenuePeriodSummaryLabels[index]}</span>
 											<span className="font-semibold" style={{ color: theme.colors.secondary.charcoal }}>{formatCurrency(amount)}</span>
 										</div>
 										<div className="h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: withAlpha(theme.colors.secondary.beige, 0.55) }}>
@@ -532,6 +672,93 @@ export function Payments() {
 					</div>
 				</div>
 			</main>
+
+			<FormModal
+				isOpen={showCreateLinkModal}
+				title="Create Payment Link"
+				onClose={closeCreateLinkModal}
+				closeDisabled={createLinkBusy}
+			>
+				<form className="space-y-4" onSubmit={handleCreatePaymentLink}>
+					<div>
+						<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+							Client <span style={{ color: theme.colors.error.text }}>*</span>
+						</label>
+						<select
+							value={createLinkForm.clientId}
+							onChange={(event) => setCreateLinkForm((current) => ({ ...current, clientId: event.target.value }))}
+							required
+							className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+							style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
+						>
+							<option value="">Select a client</option>
+							{clients.map((client) => {
+								const clientId = client.id || client._id;
+								return (
+									<option key={clientId} value={clientId}>
+										{getClientName(client)}
+									</option>
+								);
+							})}
+						</select>
+					</div>
+
+					<div>
+						<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
+							Amount (EUR) <span style={{ color: theme.colors.error.text }}>*</span>
+						</label>
+						<input
+							type="number"
+							min="0.01"
+							step="0.01"
+							value={createLinkForm.amount}
+							onChange={(event) => setCreateLinkForm((current) => ({ ...current, amount: event.target.value }))}
+							required
+							className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
+							style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
+						/>
+					</div>
+
+					{createLinkMessage && (
+						<div
+							className="rounded-xl px-3 py-2 text-sm"
+							style={{
+								backgroundColor: withAlpha(theme.colors.error.bg, 0.9),
+								border: `1px solid ${theme.colors.error.border}`,
+								color: theme.colors.error.text,
+							}}
+						>
+							{createLinkMessage}
+						</div>
+					)}
+
+					<div className="flex items-center justify-end gap-2 pt-2">
+						<button
+							type="button"
+							onClick={closeCreateLinkModal}
+							disabled={createLinkBusy}
+							className="rounded-xl px-4 py-2 text-sm font-medium"
+							style={{
+								backgroundColor: withAlpha(theme.colors.secondary.beige, 0.7),
+								color: theme.colors.secondary.charcoal,
+							}}
+						>
+							Cancel
+						</button>
+						<button
+							type="submit"
+							disabled={createLinkBusy}
+							className="rounded-xl px-4 py-2 text-sm font-semibold"
+							style={{
+								backgroundColor: createLinkBusy ? theme.colors.primary.light : theme.colors.primary.DEFAULT,
+								color: theme.colors.gray[50],
+							}}
+						>
+							{createLinkBusy ? 'Sending...' : 'Create & Send Now'}
+						</button>
+					</div>
+				</form>
+			</FormModal>
 		</div>
 	);
 }

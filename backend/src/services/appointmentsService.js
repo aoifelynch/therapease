@@ -60,7 +60,7 @@ const getAppointmentInterval = (dateValue, startTimeValue, endTimeValue) => {
 
 const hasOverlap = (startA, endA, startB, endB) => startA < endB && endA > startB;
 
-const PAYMENT_LINK_TIMINGS = new Set(['none', 'before', 'after']);
+const PAYMENT_LINK_TIMINGS = new Set(['none', 'before', 'after', 'now']);
 
 const toBoolean = (value) => value === true || value === 'true' || value === 1 || value === '1';
 
@@ -69,7 +69,7 @@ const normalizeAppointmentPaymentConfig = (input = {}, existing = {}) => {
   const paymentLinkTiming = String(requestedTiming);
 
   if (!PAYMENT_LINK_TIMINGS.has(paymentLinkTiming)) {
-    throw new HttpError(BAD_REQUEST, "'paymentLinkTiming' must be 'none', 'before', or 'after'");
+    throw new HttpError(BAD_REQUEST, "'paymentLinkTiming' must be 'none', 'before', 'after', or 'now'");
   }
 
   if (paymentLinkTiming === 'none') {
@@ -84,7 +84,7 @@ const normalizeAppointmentPaymentConfig = (input = {}, existing = {}) => {
   const normalizedQuotedAmount = Number(quotedSource);
 
   if (!Number.isFinite(normalizedQuotedAmount) || normalizedQuotedAmount <= 0) {
-    throw new HttpError(BAD_REQUEST, 'quotedAmount must be greater than 0 when paymentLinkTiming is before or after');
+    throw new HttpError(BAD_REQUEST, 'quotedAmount must be greater than 0 when paymentLinkTiming is before, after, or now');
   }
 
   const autoSendSource = input.autoSendPaymentLink ?? existing.autoSendPaymentLink ?? false;
@@ -122,6 +122,36 @@ const sendAfterSessionPaymentLinkIfNeeded = async (appointment) => {
     }
   } catch (paymentError) {
     console.error('Unable to send after-session payment link:', paymentError);
+  }
+};
+
+const sendImmediatePaymentLinkIfNeeded = async ({ appointment, client }) => {
+  if (!appointment) return;
+  if (appointment.paymentLinkTiming !== 'now') return;
+
+  const resolvedClient = client || appointment.client;
+
+  try {
+    const paymentLink = await createPaymentLinkForAppointment({
+      therapistId: appointment.user,
+      appointmentId: appointment._id,
+      clientId: resolvedClient?._id || resolvedClient,
+      amount: appointment.quotedAmount,
+      clientEmail: resolvedClient?.email,
+      skipIfExisting: true,
+    });
+
+    if (paymentLink?.url && resolvedClient?.phone) {
+      const clientName = resolvedClient?.firstName || 'there';
+      const message = `Hi ${clientName}, here is your payment link for your session: ${paymentLink.url}`;
+
+      await sendSMS({
+        to: resolvedClient.phone,
+        message,
+      });
+    }
+  } catch (paymentError) {
+    console.error('Unable to send immediate payment link:', paymentError);
   }
 };
 
@@ -312,6 +342,7 @@ export default {
 
     let updatedFields = { ...updateData };
     const previousStatus = appointment.status;
+    const previousPaymentLinkTiming = appointment.paymentLinkTiming;
     const previousType = appointment.type;
     const previousZoomMeetingId = appointment.zoomMeetingId;
     let clientForNotification = appointment.client;
@@ -415,6 +446,16 @@ export default {
         to: updatedAppointment.client.email,
         subject: 'Appointment Updated - TherapEase',
         html,
+      });
+    }
+
+    const shouldSendImmediatePaymentLink = previousPaymentLinkTiming !== 'now'
+      && updatedAppointment.paymentLinkTiming === 'now';
+
+    if (shouldSendImmediatePaymentLink) {
+      await sendImmediatePaymentLinkIfNeeded({
+        appointment: updatedAppointment,
+        client: updatedAppointment.client,
       });
     }
 

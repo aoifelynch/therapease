@@ -257,7 +257,7 @@ export const appointmentSchema = {
   paymentLinkTiming: {
     in: ['body'],
     optional: true,
-    isIn: { options: [['none', 'before', 'after']], errorMessage: "'paymentLinkTiming' must be 'none', 'before', or 'after'" }
+    isIn: { options: [['none', 'before', 'after', 'now']], errorMessage: "'paymentLinkTiming' must be 'none', 'before', 'after', or 'now'" }
   },
   autoSendPaymentLink: {
     in: ['body'],
@@ -315,7 +315,7 @@ export const appointmentUpdateSchema = {
   paymentLinkTiming: {
     in: ['body'],
     optional: true,
-    isIn: { options: [['none', 'before', 'after']], errorMessage: "'paymentLinkTiming' must be 'none', 'before', or 'after'" }
+    isIn: { options: [['none', 'before', 'after', 'now']], errorMessage: "'paymentLinkTiming' must be 'none', 'before', 'after', or 'now'" }
   },
   autoSendPaymentLink: {
     in: ['body'],
@@ -376,9 +376,9 @@ export const noteSchema = {
 export const paymentSchema = {
   appointmentId: {
     in: ['body'],
-    notEmpty: { errorMessage: "'appointmentId' is required" },
+    optional: true,
     custom: {
-      options: isObjectId,
+      options: (value) => !value || isObjectId(value),
       errorMessage: "'appointmentId' must be a valid ObjectId"
     }
   },
@@ -422,9 +422,9 @@ export const paymentSessionSchema = {
   },
   appointmentId: {
     in: ['body'],
-    notEmpty: { errorMessage: "'appointmentId' is required" },
+    optional: true,
     custom: {
-      options: isObjectId,
+      options: (value) => !value || isObjectId(value),
       errorMessage: "'appointmentId' must be a valid ObjectId"
     }
   },
@@ -435,8 +435,13 @@ export const paymentSessionSchema = {
   },
   clientEmail: {
     in: ['body'],
-    notEmpty: { errorMessage: "'clientEmail' is required" },
+    optional: true,
     isEmail: { errorMessage: "'clientEmail' must be a valid email address" }
+  },
+  sendNow: {
+    in: ['body'],
+    optional: true,
+    isBoolean: { errorMessage: "'sendNow' must be a boolean" }
   }
 };
 

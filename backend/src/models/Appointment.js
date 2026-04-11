@@ -47,7 +47,7 @@ const appointmentSchema = new mongoose.Schema(
 
     paymentLinkTiming: {
       type: String,
-      enum: ["none", "before", "after"],
+      enum: ["none", "before", "after", "now"],
       default: "none"
     },
 

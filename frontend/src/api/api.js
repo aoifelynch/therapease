@@ -334,7 +334,9 @@ export const paymentsAPI = {
   },
 
   async createSession(sessionData) {
-    const response = await api.post('/payments/create-session', sessionData);
+    const response = await api.post('/payments/create-session', sessionData, {
+      toastSuccessMessage: 'Payment link sent successfully',
+    });
     return response.data;
   }
 };

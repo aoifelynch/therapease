@@ -18,6 +18,7 @@ import { useAuth } from '../context/AuthContext';
 import { theme } from '../utils/theme';
 import { componentStyles } from '../utils/componentStyles';
 import { withAlpha, formatLongDate, formatClock, getClientName } from '../utils/formatters';
+import { useNavigate } from 'react-router-dom';
 
 const DEFAULT_FILTER = 'all';
 
@@ -45,6 +46,22 @@ const parseFeeValue = (value) => {
   const numeric = Number(value);
   if (!Number.isFinite(numeric) || numeric < 0) return '';
   return numeric.toFixed(2);
+};
+
+const getAppointmentClientId = (appointment) => {
+  const clientValue = appointment?.client;
+
+  if (!clientValue) return '';
+  if (typeof clientValue === 'string') return clientValue;
+
+  return clientValue.id || clientValue._id || '';
+};
+
+const getPaymentLinkTimingLabel = (value) => {
+  if (value === 'before') return 'Before Session';
+  if (value === 'after') return 'After Session';
+  if (value === 'now') return 'Sent Instantly';
+  return 'No Payment Link Sent';
 };
 
 const getCalendarDateFromQuery = (value) => {
@@ -178,6 +195,8 @@ export function Calendar() {
   const { user } = useAuth();
   const calendarRef = useRef(null);
   const datePickerInputRef = useRef(null);
+  const appointmentNotesRequestIdRef = useRef(0);
+  const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
@@ -207,8 +226,13 @@ export function Calendar() {
   const [createBusy, setCreateBusy] = useState(false);
   const [createMessage, setCreateMessage] = useState('');
   const [createTimeMessage, setCreateTimeMessage] = useState('');
+  const [showAppointmentDetailsModal, setShowAppointmentDetailsModal] = useState(false);
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState('');
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [selectedAppointmentNotes, setSelectedAppointmentNotes] = useState([]);
+  const [appointmentDetailsBusy, setAppointmentDetailsBusy] = useState(false);
+  const [appointmentDetailsMessage, setAppointmentDetailsMessage] = useState('');
   const [appointmentBusy, setAppointmentBusy] = useState(false);
   const [appointmentDeleteBusy, setAppointmentDeleteBusy] = useState(false);
   const [appointmentMessage, setAppointmentMessage] = useState('');
@@ -268,6 +292,34 @@ export function Calendar() {
     if (appointmentBusy || appointmentDeleteBusy) return;
     setShowAppointmentModal(false);
     setSelectedAppointmentId('');
+    setSelectedAppointment(null);
+    setSelectedAppointmentNotes([]);
+    setAppointmentDetailsBusy(false);
+    setAppointmentDetailsMessage('');
+    setAppointmentMessage('');
+    setConfirmDeleteAppointment(false);
+    setAppointmentForm({
+      clientId: '',
+      date: '',
+      startTime: '',
+      endTime: '',
+      type: 'in-person',
+      status: 'upcoming',
+      paymentLinkTiming: 'none',
+      autoSendPaymentLink: false,
+      amount: '',
+    });
+  };
+
+  const closeAppointmentDetailsModal = () => {
+    if (appointmentBusy || appointmentDeleteBusy) return;
+
+    setShowAppointmentDetailsModal(false);
+    setSelectedAppointmentId('');
+    setSelectedAppointment(null);
+    setSelectedAppointmentNotes([]);
+    setAppointmentDetailsBusy(false);
+    setAppointmentDetailsMessage('');
     setAppointmentMessage('');
     setConfirmDeleteAppointment(false);
     setAppointmentForm({
@@ -302,7 +354,7 @@ export function Calendar() {
       type: createForm.type,
       status: 'upcoming',
       paymentLinkTiming: createForm.paymentLinkTiming,
-      autoSendPaymentLink: createForm.paymentLinkTiming === 'before',
+      autoSendPaymentLink: createForm.paymentLinkTiming === 'before' || createForm.paymentLinkTiming === 'now',
       quotedAmount: createForm.paymentLinkTiming === 'none' ? undefined : Number(createForm.amount),
     };
 
@@ -371,16 +423,14 @@ export function Calendar() {
     }
   };
 
-  const handleEventClick = (eventInfo) => {
+  const handleEventClick = async (eventInfo) => {
     const appointmentId = eventInfo?.event?.id;
     if (!appointmentId) return;
 
     const appointment = appointments.find((item) => String(item.id || item._id) === String(appointmentId));
     if (!appointment) return;
 
-    const appointmentClientId = typeof appointment.client === 'string'
-      ? appointment.client
-      : appointment.client?.id || appointment.client?._id || '';
+    const appointmentClientId = getAppointmentClientId(appointment);
 
     const normalizedDate = appointment.date
       ? new Date(appointment.date).toISOString().slice(0, 10)
@@ -401,8 +451,62 @@ export function Calendar() {
         : (appointment.amount ? Number(appointment.amount).toFixed(2) : ''),
     });
     setAppointmentMessage('');
+    setAppointmentDetailsMessage('');
     setConfirmDeleteAppointment(false);
+    setSelectedAppointment(appointment);
+    setSelectedAppointmentNotes([]);
+    setAppointmentDetailsBusy(true);
+    setShowAppointmentDetailsModal(true);
+    const requestId = appointmentNotesRequestIdRef.current + 1;
+    appointmentNotesRequestIdRef.current = requestId;
+
+    if (!appointmentClientId) {
+      if (appointmentNotesRequestIdRef.current === requestId) {
+        setAppointmentDetailsBusy(false);
+      }
+      return;
+    }
+
+    try {
+      const response = await clientsAPI.getNotes(appointmentClientId);
+      if (appointmentNotesRequestIdRef.current !== requestId) return;
+      const notes = Array.isArray(response.data) ? response.data : [];
+      const matchedAppointmentNotes = notes.filter((note) => {
+        const noteAppointmentId = note?.appointment?.id || note?.appointment?._id || note?.appointment;
+        return String(noteAppointmentId || '') === String(appointmentId);
+      });
+
+      setSelectedAppointmentNotes(matchedAppointmentNotes);
+    } catch (requestError) {
+      if (appointmentNotesRequestIdRef.current !== requestId) return;
+      setAppointmentDetailsMessage(requestError.response?.data?.message || requestError.message || 'Unable to load appointment notes');
+    } finally {
+      if (appointmentNotesRequestIdRef.current === requestId) {
+        setAppointmentDetailsBusy(false);
+      }
+    }
+  };
+
+  const handleEditAppointmentFromDetails = () => {
+    if (!selectedAppointmentId) return;
+
+    setShowAppointmentDetailsModal(false);
+    setAppointmentDetailsMessage('');
     setShowAppointmentModal(true);
+  };
+
+  const handleOpenClientNote = (note) => {
+    const selectedClientId = getAppointmentClientId(selectedAppointment);
+    const noteId = note?.id || note?._id;
+
+    if (!selectedClientId || !noteId) return;
+
+    navigate(`/clients/${selectedClientId}`, {
+      state: {
+        openNotesTab: true,
+        openNoteId: noteId,
+      },
+    });
   };
 
   const handleUpdateAppointment = async (event) => {
@@ -487,6 +591,7 @@ export function Calendar() {
       await appointmentsAPI.delete(selectedAppointmentId);
       setAppointments((current) => current.filter((item) => String(item.id || item._id) !== String(selectedAppointmentId)));
       closeDeleteAppointmentModal();
+      setShowAppointmentDetailsModal(false);
       closeAppointmentModal();
     } catch (requestError) {
       setDeleteAppointmentMessage(requestError.response?.data?.message || requestError.message || 'Unable to delete appointment');
@@ -820,6 +925,142 @@ export function Calendar() {
       </main>
 
       <FormModal
+        isOpen={showAppointmentDetailsModal}
+        title="Appointment Details"
+        onClose={closeAppointmentDetailsModal}
+        closeDisabled={appointmentBusy || appointmentDeleteBusy}
+        maxWidthClass="max-w-2xl"
+      >
+        <div className="space-y-5">
+          {selectedAppointment ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border p-4" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9), backgroundColor: withAlpha(theme.colors.gray[50], 0.78) }}>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6) }}>Client</p>
+                <p className="mt-1 text-base font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
+                  {getClientName(selectedAppointment.client)}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border p-4" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9), backgroundColor: withAlpha(theme.colors.gray[50], 0.78) }}>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6) }}>Date &amp; Time</p>
+                <p className="mt-1 text-base font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
+                  {formatLongDate(new Date(selectedAppointment.date))}
+                </p>
+                <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.8) }}>
+                  {selectedAppointment.startTime} - {selectedAppointment.endTime}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border p-4" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9), backgroundColor: withAlpha(theme.colors.gray[50], 0.78) }}>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6) }}>Session</p>
+                <p className="mt-1 text-base font-semibold capitalize" style={{ color: theme.colors.secondary.charcoal }}>
+                  {selectedAppointment.type || 'in-person'}
+                </p>
+                <p className="text-sm capitalize" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.8) }}>
+                  {selectedAppointment.status || 'upcoming'}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border p-4" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9), backgroundColor: withAlpha(theme.colors.gray[50], 0.78) }}>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6) }}>Payment Link</p>
+                <p className="mt-1 text-base font-semibold capitalize" style={{ color: theme.colors.secondary.charcoal }}>
+                  {getPaymentLinkTimingLabel(selectedAppointment.paymentLinkTiming)}
+                </p>
+                <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.8) }}>
+                  {selectedAppointment.quotedAmount ? `€${Number(selectedAppointment.quotedAmount).toFixed(2)}` : 'No amount set'}
+                </p>
+              </div>
+            </div>
+          ) : null}
+
+          {appointmentDetailsMessage && (
+            <div
+              className="rounded-xl px-3 py-2 text-sm"
+              style={{
+                backgroundColor: withAlpha(theme.colors.error.bg, 0.9),
+                border: `1px solid ${theme.colors.error.border}`,
+                color: theme.colors.error.text,
+              }}
+            >
+              {appointmentDetailsMessage}
+            </div>
+          )}
+
+          <div className="rounded-2xl border p-4" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9), backgroundColor: withAlpha(theme.colors.gray[50], 0.74) }}>
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.14em]" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6) }}>
+                Appointment Notes
+              </h3>
+              {appointmentDetailsBusy && (
+                <span className="text-xs font-medium" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.7) }}>
+                  Loading notes...
+                </span>
+              )}
+            </div>
+
+            <div className="mt-3 space-y-3">
+              {!appointmentDetailsBusy && selectedAppointmentNotes.length === 0 && (
+                <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.75) }}>
+                  No notes attached to this appointment.
+                </p>
+              )}
+
+              {selectedAppointmentNotes.map((note) => (
+                <button
+                  key={note.id || note._id}
+                  type="button"
+                  onClick={() => handleOpenClientNote(note)}
+                  className="w-full rounded-xl border px-3 py-3 text-left transition-opacity hover:opacity-90"
+                  style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.85), backgroundColor: theme.colors.gray[50] }}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
+                      {note.templateType || 'Note'}
+                    </p>
+                    <p className="text-xs" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.62) }}>
+                      {note.createdAt ? formatLongDate(new Date(note.createdAt)) : ''}
+                    </p>
+                  </div>
+                  <p className="mt-2 text-sm leading-6" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.85) }}>
+                    {note.content}
+                  </p>
+        
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+            <button
+              type="button"
+              onClick={handleDeleteAppointment}
+              disabled={appointmentBusy || appointmentDeleteBusy}
+              className="rounded-xl px-4 py-2 text-sm font-semibold"
+              style={{
+                backgroundColor: withAlpha(theme.colors.error.bg, 0.95),
+                color: theme.colors.error.text,
+              }}
+            >
+              Delete Appointment
+            </button>
+
+            <button
+              type="button"
+              onClick={handleEditAppointmentFromDetails}
+              disabled={appointmentBusy || appointmentDeleteBusy}
+              className="rounded-xl px-4 py-2 text-sm font-semibold"
+              style={{
+                backgroundColor: theme.colors.primary.DEFAULT,
+                color: theme.colors.gray[50],
+              }}
+            >
+              Edit Appointment
+            </button>
+          </div>
+        </div>
+      </FormModal>
+
+      <FormModal
         isOpen={showAppointmentModal}
         title="Edit Appointment"
         onClose={closeAppointmentModal}
@@ -964,7 +1205,7 @@ export function Calendar() {
                       setAppointmentForm((current) => ({
                         ...current,
                         paymentLinkTiming: nextTiming,
-                        autoSendPaymentLink: nextTiming === 'none' ? false : current.autoSendPaymentLink,
+                        autoSendPaymentLink: nextTiming === 'none' ? false : (nextTiming === 'now' ? true : current.autoSendPaymentLink),
                         amount: nextTiming === 'none' ? '' : (current.amount || getDefaultFeeByType(current.type)),
                       }));
                     }}
@@ -972,6 +1213,7 @@ export function Calendar() {
                     style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.92), color: theme.colors.secondary.charcoal }}
                   >
                     <option value="none">Do not send automatically</option>
+                    <option value="now">Send now</option>
                     <option value="before">Send before session</option>
                     <option value="after">Send after session</option>
                   </select>
@@ -1020,33 +1262,18 @@ export function Calendar() {
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+              <div className="flex items-center justify-end gap-2 pt-2">
                 <button
-                  type="button"
-                  onClick={handleDeleteAppointment}
+                  type="submit"
                   disabled={appointmentBusy || appointmentDeleteBusy}
                   className="rounded-xl px-4 py-2 text-sm font-semibold"
                   style={{
-                    backgroundColor: withAlpha(theme.colors.error.bg, 0.95),
-                    color: theme.colors.error.text,
+                    backgroundColor: appointmentBusy ? theme.colors.primary.light : theme.colors.primary.DEFAULT,
+                    color: theme.colors.gray[50],
                   }}
                 >
-                  Delete Appointment
+                  {appointmentBusy ? 'Saving...' : 'Save Changes'}
                 </button>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="submit"
-                    disabled={appointmentBusy || appointmentDeleteBusy}
-                    className="rounded-xl px-4 py-2 text-sm font-semibold"
-                    style={{
-                      backgroundColor: appointmentBusy ? theme.colors.primary.light : theme.colors.primary.DEFAULT,
-                      color: theme.colors.gray[50],
-                    }}
-                  >
-                    {appointmentBusy ? 'Saving...' : 'Save Changes'}
-                  </button>
-                </div>
               </div>
         </form>
       </FormModal>
@@ -1200,6 +1427,7 @@ export function Calendar() {
                     style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.92), color: theme.colors.secondary.charcoal }}
                   >
                     <option value="none">Do not send automatically</option>
+                    <option value="now">Send now</option>
                     <option value="before">Send before session</option>
                     <option value="after">Send after session</option>
                   </select>

@@ -110,22 +110,88 @@ export const createPaymentLinkForAppointment = async ({
   };
 };
 
+export const createPaymentLink = async ({
+  therapistId,
+  clientId,
+  appointmentId,
+  amount,
+  clientEmail,
+  skipIfExisting = false,
+}) => {
+  if (appointmentId) {
+    return createPaymentLinkForAppointment({
+      therapistId,
+      appointmentId,
+      clientId,
+      amount,
+      clientEmail,
+      skipIfExisting,
+    });
+  }
+
+  if (!clientId) {
+    throw new HttpError(BAD_REQUEST, 'Client ID is required');
+  }
+
+  const client = await Client.findById(clientId).select('user email phone firstName lastName').lean();
+  if (!client) {
+    throw new HttpError(NOT_FOUND, 'Client not found');
+  }
+
+  if (String(client.user) !== String(therapistId)) {
+    throw new HttpError(FORBIDDEN, 'Forbidden');
+  }
+
+  const normalizedProvidedEmail = String(clientEmail || '').trim().toLowerCase();
+  const normalizedClientEmail = String(client.email || '').trim().toLowerCase();
+
+  if (normalizedProvidedEmail && normalizedClientEmail && normalizedProvidedEmail !== normalizedClientEmail) {
+    throw new HttpError(BAD_REQUEST, 'Provided email does not match client email on record');
+  }
+
+  const checkoutEmail = normalizedClientEmail || normalizedProvidedEmail;
+  if (!checkoutEmail) {
+    throw new HttpError(BAD_REQUEST, 'Client email is required to create a payment session');
+  }
+
+  const resolvedAmount = normalizeAmount(amount);
+
+  const session = await createCheckoutSession({
+    clientEmail: checkoutEmail,
+    amount: resolvedAmount,
+    appointmentId: null,
+    clientId,
+    therapistId,
+  });
+
+  await Payment.create({
+    therapist: therapistId,
+    client: clientId,
+    stripeSessionId: session.id,
+    amount: resolvedAmount,
+    status: 'pending',
+  });
+
+  return {
+    url: session.url,
+    amount: resolvedAmount,
+    appointment: null,
+    client,
+  };
+};
+
 export default {
   // Get all payments for a user
   async getAllPayments(userId) {
-    const payments = await Payment.find()
+    const payments = await Payment.find({ therapist: userId })
+      .populate('client')
       .populate({
         path: 'appointment',
         populate: { path: 'client' }
       })
       .exec();
 
-    // Filter payments to only those belonging to the user's appointments
-    const userPayments = payments.filter(payment => 
-      payment.appointment && payment.appointment.user.toString() === userId.toString()
-    );
-
-    return userPayments;
+    return payments;
   },
 
   // Create a new payment

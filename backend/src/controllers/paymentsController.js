@@ -1,5 +1,6 @@
 import paymentsService from '../services/paymentsService.js';
-import { createPaymentLinkForAppointment } from '../services/paymentsService.js';
+import { createPaymentLink } from '../services/paymentsService.js';
+import { sendSMS } from '../services/smsService.js';
 
 // GET ALL
 export const getAllPayments = async (req, res) => {
@@ -26,8 +27,8 @@ export const getAllPayments = async (req, res) => {
 // Stripe
 export const createPaymentSession = async (req, res) => {
 
-  const { clientId, appointmentId, amount, clientEmail } = req.body;
-  const paymentLink = await createPaymentLinkForAppointment({
+  const { clientId, appointmentId, amount, clientEmail, sendNow } = req.body;
+  const paymentLink = await createPaymentLink({
     therapistId: req.user._id,
     appointmentId,
     clientId,
@@ -36,8 +37,23 @@ export const createPaymentSession = async (req, res) => {
     skipIfExisting: false,
   });
 
+  let sentNow = false;
+
+  if ((sendNow === true || sendNow === 'true') && paymentLink?.url && paymentLink?.client?.phone) {
+    const clientName = paymentLink.client.firstName || 'there';
+    const message = `Hi ${clientName}, here is your payment link: ${paymentLink.url}`;
+
+    await sendSMS({
+      to: paymentLink.client.phone,
+      message,
+    });
+
+    sentNow = true;
+  }
+
   res.status(201).json({
-    url: paymentLink.url
+    url: paymentLink.url,
+    sentNow,
   });
 
 };

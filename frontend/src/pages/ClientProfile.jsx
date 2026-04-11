@@ -10,7 +10,7 @@ import { SectionCard } from '../components/SectionCard';
 import { clientsAPI, filesAPI, notesAPI } from '../api/api';
 import { useAuth } from '../context/AuthContext';
 import { theme } from '../utils/theme';
-import { withAlpha, formatLongDate, formatClock, formatCurrency } from '../utils/formatters';
+import { withAlpha, formatLongDate, formatClock, formatCurrency, getClientName } from '../utils/formatters';
 import { componentStyles } from '../utils/componentStyles';
 import { BackIcon, EditIcon, TrashIcon } from '../utils/icons';
 
@@ -20,6 +20,23 @@ const getTodayDateKey = () => {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+};
+
+const getPaymentLinkTimingLabel = (value) => {
+  if (value === 'before') return 'Before Session';
+  if (value === 'after') return 'After Session';
+  if (value === 'now') return 'Sent Instantly';
+  return 'No Automatic Link';
+};
+
+const getAppointmentNotes = (appointment, allNotes) => {
+  const appointmentId = appointment?.id || appointment?._id;
+  if (!appointmentId) return [];
+
+  return allNotes.filter((note) => {
+    const noteAppointmentId = note?.appointment?.id || note?.appointment?._id || note?.appointment;
+    return String(noteAppointmentId || '') === String(appointmentId);
+  });
 };
 
 export function ClientProfile() {
@@ -42,6 +59,7 @@ export function ClientProfile() {
   const [noteContent, setNoteContent] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [selectedAppointmentId, setSelectedAppointmentId] = useState('');
+  const [viewingAppointment, setViewingAppointment] = useState(null);
   const [isNoteEditorOpen, setIsNoteEditorOpen] = useState(false);
   const [noteBusy, setNoteBusy] = useState(false);
   const [noteStatusMessage, setNoteStatusMessage] = useState('');
@@ -132,6 +150,17 @@ export function ClientProfile() {
     openEditClientModal();
     navigate(location.pathname, { replace: true, state: null });
   }, [client, loading, location.pathname, location.state, navigate]);
+
+  useEffect(() => {
+    if (!location.state?.openNoteId || loading || !notes.length) return;
+
+    const note = notes.find((item) => String(item.id || item._id) === String(location.state.openNoteId));
+    if (!note) return;
+
+    setActiveTab('notes');
+    setViewingNote(note);
+    navigate(location.pathname, { replace: true, state: null });
+  }, [loading, location.pathname, location.state, navigate, notes]);
 
   const handleSaveClientDetails = async (event) => {
     event.preventDefault();
@@ -485,6 +514,16 @@ export function ClientProfile() {
     setFileToDelete({ id: fileId });
     setDeleteFileMessage('');
     setShowDeleteFileModal(true);
+  };
+
+  const openAppointmentDetailsModal = (appointment) => {
+    if (!appointment) return;
+
+    setViewingAppointment(appointment);
+  };
+
+  const closeAppointmentDetailsModal = () => {
+    setViewingAppointment(null);
   };
 
   const handleConfirmDeleteFile = async () => {
@@ -1167,7 +1206,13 @@ export function ClientProfile() {
                   <div className="space-y-3">
                     {appointments.length > 0 ? (
                       [...appointments].sort((a, b) => new Date(b.date) - new Date(a.date)).map((appointment) => (
-                        <div key={appointment._id || appointment.id} className="rounded-2xl p-3" style={{ backgroundColor: withAlpha(theme.colors.secondary.cream, 0.8) }}>
+                        <button
+                          key={appointment._id || appointment.id}
+                          type="button"
+                          onClick={() => openAppointmentDetailsModal(appointment)}
+                          className="w-full rounded-2xl p-3 text-left transition-opacity hover:opacity-90"
+                          style={{ backgroundColor: withAlpha(theme.colors.secondary.cream, 0.8) }}
+                        >
                           <p className="text-sm font-medium">
                             {new Intl.DateTimeFormat('en-IE', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(appointment.date))}
                             {' '}
@@ -1178,7 +1223,7 @@ export function ClientProfile() {
                           <p className="text-xs" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.65) }}>
                             {appointment.type === 'online' ? 'Online' : 'In-person'} • {appointment.status}
                           </p>
-                        </div>
+                        </button>
                       ))
                     ) : (
                       <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.58) }}>
@@ -1281,6 +1326,101 @@ export function ClientProfile() {
                     {viewingNote?.content || 'No content'}
                   </p>
                 </div>
+              </FormModal>
+
+              <FormModal
+                isOpen={Boolean(viewingAppointment)}
+                title="Appointment Details"
+                onClose={closeAppointmentDetailsModal}
+                maxWidthClass="max-w-2xl"
+              >
+                {viewingAppointment ? (
+                  <div className="space-y-5">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="rounded-2xl border p-4" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9), backgroundColor: withAlpha(theme.colors.gray[50], 0.78) }}>
+                        <p className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6) }}>Client</p>
+                        <p className="mt-1 text-base font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
+                          {getClientName(client)}
+                        </p>
+                      </div>
+
+                      <div className="rounded-2xl border p-4" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9), backgroundColor: withAlpha(theme.colors.gray[50], 0.78) }}>
+                        <p className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6) }}>Date &amp; Time</p>
+                        <p className="mt-1 text-base font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
+                          {formatLongDate(new Date(viewingAppointment.date))}
+                        </p>
+                        <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.8) }}>
+                          {viewingAppointment.startTime} - {viewingAppointment.endTime}
+                        </p>
+                      </div>
+
+                      <div className="rounded-2xl border p-4" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9), backgroundColor: withAlpha(theme.colors.gray[50], 0.78) }}>
+                        <p className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6) }}>Session</p>
+                        <p className="mt-1 text-base font-semibold capitalize" style={{ color: theme.colors.secondary.charcoal }}>
+                          {viewingAppointment.type === 'online' ? 'Online' : 'In-person'}
+                        </p>
+                        <p className="text-sm capitalize" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.8) }}>
+                          {viewingAppointment.status || 'scheduled'}
+                        </p>
+                      </div>
+
+                      <div className="rounded-2xl border p-4" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9), backgroundColor: withAlpha(theme.colors.gray[50], 0.78) }}>
+                        <p className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6) }}>Payment Link</p>
+                        <p className="mt-1 text-base font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
+                          {getPaymentLinkTimingLabel(viewingAppointment.paymentLinkTiming)}
+                        </p>
+                        <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.8) }}>
+                          {viewingAppointment.quotedAmount ? formatCurrency(viewingAppointment.quotedAmount) : 'No amount set'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border p-4" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9), backgroundColor: withAlpha(theme.colors.gray[50], 0.74) }}>
+                      <h3 className="text-sm font-semibold uppercase tracking-[0.14em]" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6) }}>
+                        Appointment Notes
+                      </h3>
+
+                      <div className="mt-3 space-y-3">
+                        {getAppointmentNotes(viewingAppointment, notes).length > 0 ? (
+                          getAppointmentNotes(viewingAppointment, notes).map((note) => (
+                            <div
+                              key={note.id || note._id}
+                              className="rounded-xl border px-3 py-3"
+                              style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.85), backgroundColor: theme.colors.gray[50] }}
+                            >
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <p className="text-sm font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
+                                  {note.templateType || 'Note'}
+                                </p>
+                                <p className="text-xs" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.62) }}>
+                                  {note.createdAt ? formatLongDate(new Date(note.createdAt)) : ''}
+                                </p>
+                              </div>
+                              <p className="mt-2 text-sm leading-6" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.85) }}>
+                                {note.content}
+                              </p>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.58) }}>
+                            No notes attached to this appointment.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end">
+                      <button
+                        type="button"
+                        onClick={closeAppointmentDetailsModal}
+                        className="rounded-xl px-4 py-2 text-sm font-semibold"
+                        style={{ backgroundColor: theme.colors.primary.DEFAULT, color: theme.colors.gray[50] }}
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
               </FormModal>
 
               <div className="rounded-3xl p-6" style={componentStyles.card}>
