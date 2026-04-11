@@ -236,6 +236,11 @@ export function Settings() {
     setDeleteModalPassword('');
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: theme.colors.secondary.cream, color: theme.colors.secondary.charcoal, fontFamily: theme.fonts.sans }}>
       <div className="flex h-screen w-full overflow-hidden">
@@ -245,7 +250,22 @@ export function Settings() {
           <PageHeader userName={currentUser?.name || user?.name} now={now} />
 
           <div className="space-y-6 px-6 py-6 md:px-8">
-            <PageTitleRow title="Settings" />
+            <PageTitleRow
+              title="Settings"
+              actions={(
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-90"
+                  style={{
+                    backgroundColor: theme.colors.secondary.charcoal,
+                    color: theme.colors.gray[50],
+                  }}
+                >
+                  Logout
+                </button>
+              )}
+            />
 
             {loading ? (
               <SectionCard className="rounded-3xl" bodyClassName="space-y-0">
@@ -383,13 +403,18 @@ export function Settings() {
                       </label>
 
                       <div className="flex flex-wrap items-center gap-3 pt-1">
-                        <button type="submit" disabled={savingProfile} className="rounded-xl px-5 py-2.5 text-sm font-medium transition-colors" style={{ ...primaryButtonStyle, opacity: savingProfile ? 0.88 : 1 }}>
+                        <button type="submit" disabled={savingProfile} className="rounded-xl px-5 py-2.5 text-sm font-medium transition-colors" style={{ ...primaryButtonStyle,backgroundColor: theme.colors.primary.light,
+                  color: theme.colors.gray[50],  opacity: savingProfile ? 0.88 : 1 }} >
                           {savingProfile ? 'Saving...' : 'Save Profile'}
                         </button>
                         <button
                           type="button"
                           className="inline-flex items-center rounded-xl px-3 py-2 text-sm font-medium"
-                          style={secondaryButtonStyle}
+                          style={{
+                            backgroundColor: theme.colors.error.bg,
+                            color: theme.colors.error.text,
+                            cursor: deletingAccount ? 'not-allowed' : 'pointer',
+                          }}
                           onClick={handleResetProfile}
                         >
                           Discard Changes

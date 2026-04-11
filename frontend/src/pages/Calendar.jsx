@@ -177,6 +177,7 @@ const renderCalendarEvent = (eventInfo) => {
 export function Calendar() {
   const { user } = useAuth();
   const calendarRef = useRef(null);
+  const datePickerInputRef = useRef(null);
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
@@ -302,7 +303,7 @@ export function Calendar() {
       status: 'upcoming',
       paymentLinkTiming: createForm.paymentLinkTiming,
       autoSendPaymentLink: createForm.paymentLinkTiming === 'before',
-      amount: createForm.paymentLinkTiming === 'none' ? undefined : Number(createForm.amount),
+      quotedAmount: createForm.paymentLinkTiming === 'none' ? undefined : Number(createForm.amount),
     };
 
     if (!payload.clientId || !payload.date || !payload.startTime || !payload.endTime || !payload.type) {
@@ -310,8 +311,8 @@ export function Calendar() {
       return;
     }
 
-    if (payload.paymentLinkTiming !== 'none' && (!Number.isFinite(payload.amount) || payload.amount <= 0)) {
-      setCreateMessage('Add a  amount greater than 0 when sending a payment link.');
+    if (payload.paymentLinkTiming !== 'none' && (!Number.isFinite(payload.quotedAmount) || payload.quotedAmount <= 0)) {
+      setCreateMessage('Add an amount greater than 0 when sending a payment link.');
       return;
     }
 
@@ -395,7 +396,9 @@ export function Calendar() {
       status: appointment.status || 'upcoming',
       paymentLinkTiming: appointment.paymentLinkTiming || 'none',
       autoSendPaymentLink: Boolean(appointment.autoSendPaymentLink),
-      amount: appointment.amount ? Number(appointment.amount).toFixed(2) : '',
+      amount: appointment.quotedAmount
+        ? Number(appointment.quotedAmount).toFixed(2)
+        : (appointment.amount ? Number(appointment.amount).toFixed(2) : ''),
     });
     setAppointmentMessage('');
     setConfirmDeleteAppointment(false);
@@ -420,7 +423,7 @@ export function Calendar() {
       status: appointmentForm.status,
       paymentLinkTiming: appointmentForm.paymentLinkTiming,
       autoSendPaymentLink: appointmentForm.autoSendPaymentLink,
-      amount: appointmentForm.paymentLinkTiming === 'none' ? undefined : Number(appointmentForm.amount),
+      quotedAmount: appointmentForm.paymentLinkTiming === 'none' ? undefined : Number(appointmentForm.amount),
     };
 
     if (!payload.clientId || !payload.date || !payload.startTime || !payload.endTime || !payload.type) {
@@ -428,8 +431,8 @@ export function Calendar() {
       return;
     }
 
-    if (payload.paymentLinkTiming !== 'none' && (!Number.isFinite(payload.amount) || payload.amount <= 0)) {
-      setAppointmentMessage('Add a  amount greater than 0 when sending a payment link.');
+    if (payload.paymentLinkTiming !== 'none' && (!Number.isFinite(payload.quotedAmount) || payload.quotedAmount <= 0)) {
+      setAppointmentMessage('Add an amount greater than 0 when sending a payment link.');
       return;
     }
 
@@ -601,6 +604,31 @@ export function Calendar() {
     calendarRef.current?.getApi().today();
   };
 
+  const openDatePicker = () => {
+    const datePicker = datePickerInputRef.current;
+    if (!datePicker) return;
+
+    const currentDate = calendarRef.current?.getApi().getDate();
+    if (currentDate instanceof Date && !Number.isNaN(currentDate.getTime())) {
+      datePicker.value = getDateKey(currentDate);
+    }
+
+    if (typeof datePicker.showPicker === 'function') {
+      datePicker.showPicker();
+      return;
+    }
+
+    datePicker.focus();
+    datePicker.click();
+  };
+
+  const handleDatePickerChange = (event) => {
+    const selectedDate = getCalendarDateFromQuery(event.target.value);
+    if (!selectedDate) return;
+
+    calendarRef.current?.getApi().gotoDate(selectedDate);
+  };
+
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: theme.colors.secondary.cream, color: theme.colors.secondary.charcoal, fontFamily: theme.fonts.sans }}>
       <AppSidebar activeNav={activeNav} onNavSelect={setActiveNav} user={user} />
@@ -643,6 +671,14 @@ export function Calendar() {
                     backgroundColor: withAlpha(theme.colors.gray[50], 0.85),
                   }}
                 >
+                  <input
+                    ref={datePickerInputRef}
+                    type="date"
+                    className="sr-only"
+                    onChange={handleDatePickerChange}
+                    tabIndex={-1}
+                    aria-hidden="true"
+                  />
                   <button
                     type="button"
                     aria-label="Previous date range"
@@ -652,9 +688,15 @@ export function Calendar() {
                   >
                     ‹
                   </button>
-                  <span className="px-2 text-sm font-semibold leading-none" style={{ color: theme.colors.secondary.charcoal }}>
+                  <button
+                    type="button"
+                    onClick={openDatePicker}
+                    className="rounded-lg px-2 py-1 text-sm font-semibold leading-none"
+                    style={{ color: theme.colors.secondary.charcoal }}
+                    aria-label="Choose a date"
+                  >
                     {viewRangeLabel || 'Select range'}
-                  </span>
+                  </button>
                   <button
                     type="button"
                     aria-label="Next date range"

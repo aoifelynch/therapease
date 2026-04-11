@@ -40,6 +40,14 @@ const formatAppointmentDate = (value) => {
 	}).format(value);
 };
 
+const getTodayDateKey = () => {
+	const date = new Date();
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, '0');
+	const day = String(date.getDate()).padStart(2, '0');
+	return `${year}-${month}-${day}`;
+};
+
 export function ClientList() {
 	const { user } = useAuth();
 	const location = useLocation();
@@ -93,6 +101,7 @@ export function ClientList() {
 		active: false,
 		inactive: false,
 	});
+	const todayDateKey = getTodayDateKey();
 
 	const resetCreateForm = () => {
 		setCreateForm({
@@ -180,6 +189,11 @@ export function ClientList() {
 			return;
 		}
 
+		if (normalizedDateOfBirth && normalizedDateOfBirth > todayDateKey) {
+			setCreateMessage('Date of birth cannot be in the future.');
+			return;
+		}
+
 		setCreateBusy(true);
 
 		try {
@@ -234,6 +248,11 @@ export function ClientList() {
 
 		if (!normalizedFirstName || !normalizedLastName || !normalizedEmail || !normalizedPhone) {
 			setEditMessage('First name, last name, email, and phone are required.');
+			return;
+		}
+
+		if (normalizedDateOfBirth && normalizedDateOfBirth > todayDateKey) {
+			setEditMessage('Date of birth cannot be in the future.');
 			return;
 		}
 
@@ -456,6 +475,8 @@ export function ClientList() {
 		});
 
 		switch (sortBy) {
+			case 'alphabetical':
+				return filteredRows.sort((first, second) => first.name.localeCompare(second.name, undefined, { sensitivity: 'base' }));
 			case 'oldest':
 				return filteredRows.sort((first, second) => first.createdAtValue - second.createdAtValue);
 			case 'recentlyEdited':
@@ -480,6 +501,7 @@ export function ClientList() {
 	};
 
 	const sortOptions = [
+		{ value: 'alphabetical', label: 'Alphabetical (A-Z)' },
 		{ value: 'newest', label: 'Newest first' },
 		{ value: 'oldest', label: 'Oldest first' },
 		{ value: 'recentlyEdited', label: 'Recently edited' },
@@ -762,6 +784,7 @@ export function ClientList() {
 								type="date"
 								value={createForm.dateOfBirth}
 								onChange={(event) => setCreateForm((current) => ({ ...current, dateOfBirth: event.target.value }))}
+								max={todayDateKey}
 								className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
 								style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
 							/>
@@ -944,6 +967,7 @@ export function ClientList() {
 								type="date"
 								value={editForm.dateOfBirth}
 								onChange={(event) => setEditForm((current) => ({ ...current, dateOfBirth: event.target.value }))}
+								max={todayDateKey}
 								className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
 								style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
 							/>

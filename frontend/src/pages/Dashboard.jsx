@@ -345,7 +345,7 @@ export function Dashboard() {
                     key={action.label}
                     to={action.to || '/dashboard'}
                     state={action.state}
-                    className="inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold no-underline transition-opacity hover:opacity-90"
+                    className="inline-flex items-center gap-2 rounded-xl px-3.5 py-1 text-sm font-semibold no-underline transition-opacity hover:opacity-90"
                     style={isPrimaryAction
                       ? {
                         backgroundColor: theme.colors.primary.DEFAULT,

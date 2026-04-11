@@ -156,7 +156,10 @@ export const authAPI = {
   },
 
   async login(email, password) {
-    const response = await api.post('/auth/login', { email, password });
+    const response = await api.post('/auth/login', { email, password }, {
+      skipSuccessToast: true,
+      skipErrorToast: true,
+    });
     return response.data;
   },
 
@@ -357,12 +360,16 @@ export const remindersAPI = {
 // Todos API
 export const todosAPI = {
   async getAll() {
-    const response = await api.get('/todos');
+    const response = await api.get('/todos', {
+      skipSuccessToast: true,
+    });
     return response.data;
   },
 
   async create(todoData) {
-    const response = await api.post('/todos', todoData);
+    const response = await api.post('/todos', todoData, {
+      skipSuccessToast: true,
+    });
     return response.data;
   },
 
@@ -374,7 +381,9 @@ export const todosAPI = {
   },
 
   async delete(todoId) {
-    const response = await api.delete(`/todos/${todoId}`);
+    const response = await api.delete(`/todos/${todoId}`, {
+      skipSuccessToast: true,
+    });
     return response.data;
   },
 };

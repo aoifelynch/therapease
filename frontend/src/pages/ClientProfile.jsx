@@ -14,6 +14,14 @@ import { withAlpha, formatLongDate, formatClock, formatCurrency } from '../utils
 import { componentStyles } from '../utils/componentStyles';
 import { BackIcon, EditIcon, TrashIcon } from '../utils/icons';
 
+const getTodayDateKey = () => {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export function ClientProfile() {
   const { clientId } = useParams();
   const navigate = useNavigate();
@@ -69,6 +77,7 @@ export function ClientProfile() {
     emergencyContactName: '',
     emergencyContactPhone: '',
   });
+  const todayDateKey = getTodayDateKey();
   const fileInputRef = useRef(null);
   const autosaveTimeoutRef = useRef(null);
   const lastSavedPayloadRef = useRef('');
@@ -140,6 +149,11 @@ export function ClientProfile() {
 
     if (!normalizedFirstName || !normalizedLastName || !normalizedEmail || !normalizedPhone) {
       setEditClientMessage('First name, last name, email, and phone are required.');
+      return;
+    }
+
+    if (normalizedDateOfBirth && normalizedDateOfBirth > todayDateKey) {
+      setEditClientMessage('Date of birth cannot be in the future.');
       return;
     }
 
@@ -692,7 +706,7 @@ export function ClientProfile() {
                   )}
                 </div>
 
-                <div className="mt65 pt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="mt-6 pt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <button
                     type="button"
                     onClick={openEditClientModal}
@@ -782,7 +796,7 @@ export function ClientProfile() {
             <div className="space-y-4">
               <SectionCard title="Client Information" className="rounded-3xl" bodyClassName="space-y-0">
                 {/* Tabs */}
-                <div className="mb-6 flex gap-6 border-b" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9) }}>
+                <div className={`${showNoteSavedPopup && activeTab !== 'files' ? 'mb-3' : 'mb-6'} flex gap-6 border-b`} style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9) }}>
                   {[
                     { id: 'notes', label: 'Notes' },
                     { id: 'files', label: 'Files' },
@@ -810,7 +824,7 @@ export function ClientProfile() {
                 </div>
 
                 {showNoteSavedPopup && activeTab !== 'files' && (
-                  <div className="mb-5 rounded-2xl px-4 pb-3 pt-2" style={{ backgroundColor: withAlpha(theme.colors.secondary.sage, 0.55), border: `1px solid ${withAlpha(theme.colors.primary.DEFAULT, 0.3)}` }}>
+                  <div className="mb-7 rounded-2xl px-4 pb-3 pt-2" style={{ backgroundColor: withAlpha(theme.colors.secondary.sage, 0.55), border: `1px solid ${withAlpha(theme.colors.primary.DEFAULT, 0.3)}` }}>
                     <div className="mb-1 h-0 w-0" style={{ borderLeft: '8px solid transparent', borderRight: '8px solid transparent', borderBottom: `10px solid ${withAlpha(theme.colors.secondary.sage, 0.55)}` }} />
                     <p className="text-sm font-semibold" style={{ color: theme.colors.primary.darker }}>
                       Your note is saved.
@@ -841,6 +855,8 @@ export function ClientProfile() {
                     </div>
                   </div>
                 )}
+
+                {showNoteSavedPopup && activeTab !== 'files' && <div aria-hidden="true" className="h-3" />}
 
                 {/* Tab Content */}
                 {activeTab === 'notes' && (
@@ -1406,6 +1422,7 @@ export function ClientProfile() {
                   type="date"
                   value={editClientForm.dateOfBirth}
                   onChange={(event) => setEditClientForm((current) => ({ ...current, dateOfBirth: event.target.value }))}
+                  max={todayDateKey}
                   className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
                   style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
                 />

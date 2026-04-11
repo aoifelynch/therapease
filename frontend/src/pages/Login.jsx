@@ -14,6 +14,15 @@ export const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
+  const getLoginErrorMessage = (err) => {
+    const apiMessage = err?.response?.data?.message || err?.response?.data?.error;
+    if (typeof apiMessage === 'string' && apiMessage.trim()) {
+      return apiMessage.trim();
+    }
+
+    return 'Invalid email or password';
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -45,7 +54,7 @@ export const Login = () => {
       login(response.user, response.accessToken, response.refreshToken);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.message || 'Invalid email or password');
+      setError(getLoginErrorMessage(err));
     } finally {
       setLoading(false);
     }

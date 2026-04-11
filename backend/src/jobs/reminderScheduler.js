@@ -2,7 +2,7 @@ import cron from "node-cron";
 import Appointment from "../models/Appointment.js";
 import { reminderQueue } from "../queues/reminderQueue.js";
 
-cron.schedule("0 9 * * *", async () => {
+cron.schedule("* * * * *", async () => {
     try {
         console.log("Running reminder scheduler...");
 

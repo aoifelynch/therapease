@@ -5,7 +5,6 @@ export const navItems = [
   { label: 'Calendar', icon: CalendarIcon },
   { label: 'Clients', icon: ClientsIcon },
   { label: 'Payments', icon: PaymentsIcon },
-  { label: 'Reports', icon: ReportsIcon },
 ];
 
 export const quickActions = [
