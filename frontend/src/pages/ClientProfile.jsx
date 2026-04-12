@@ -3,41 +3,23 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { AppSidebar } from '../components/AppSidebar';
 import { PageHeader } from '../components/PageHeader';
 import { ErrorAlert } from '../components/ErrorAlert';
-import { FormModal } from '../components/FormModal';
+import { ModalShell } from '../components/ModalShell';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { ClientFormModal } from '../components/client/ClientFormModal';
+import { ClientAppointmentDetailsModal } from '../components/client/ClientAppointmentDetailsModal';
 import { useLiveNow } from '../hooks/useLiveNow';
 import { SectionCard } from '../components/SectionCard';
 import { clientsAPI, filesAPI, notesAPI } from '../api/api';
 import { useAuth } from '../context/AuthContext';
 import { theme } from '../utils/theme';
-import { withAlpha, formatLongDate, formatClock, formatCurrency, getClientName } from '../utils/formatters';
+import { withAlpha, formatCurrency } from '../utils/formatters';
 import { componentStyles } from '../utils/componentStyles';
 import { BackIcon, EditIcon, TrashIcon } from '../utils/icons';
-
-const getTodayDateKey = () => {
-  const date = new Date();
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
-const getPaymentLinkTimingLabel = (value) => {
-  if (value === 'before') return 'Before Session';
-  if (value === 'after') return 'After Session';
-  if (value === 'now') return 'Sent Instantly';
-  return 'No Automatic Link';
-};
-
-const getAppointmentNotes = (appointment, allNotes) => {
-  const appointmentId = appointment?.id || appointment?._id;
-  if (!appointmentId) return [];
-
-  return allNotes.filter((note) => {
-    const noteAppointmentId = note?.appointment?.id || note?.appointment?._id || note?.appointment;
-    return String(noteAppointmentId || '') === String(appointmentId);
-  });
-};
+import {
+  formatShortDate,
+  getTodayDateKey,
+  isImageFile,
+} from '../utils/clientProfileUtils';
 
 export function ClientProfile() {
   const { clientId } = useParams();
@@ -64,7 +46,6 @@ export function ClientProfile() {
   const [noteBusy, setNoteBusy] = useState(false);
   const [noteStatusMessage, setNoteStatusMessage] = useState('');
   const [fileUploadBusy, setFileUploadBusy] = useState(false);
-  const [fileBusyId, setFileBusyId] = useState(null);
   const [fileStatusMessage, setFileStatusMessage] = useState('');
   const [showAllFiles, setShowAllFiles] = useState(false);
   const [viewingNote, setViewingNote] = useState(null);
@@ -493,12 +474,6 @@ export function ClientProfile() {
     }
   };
 
-  const isImageFile = (file) => {
-    const fileType = String(file.fileType || '').toLowerCase();
-    const fileName = String(file.fileName || file.name || '').toLowerCase();
-    return fileType.startsWith('image/') || /\.(png|jpg|jpeg|gif|webp|bmp|svg)$/.test(fileName);
-  };
-
   const handleOpenFile = (file) => {
     const targetUrl = file.fileURL || file.url || '';
 
@@ -575,12 +550,6 @@ export function ClientProfile() {
       }
     };
   }, [activeTab, composeNotePayload, editingNoteId, isNoteEditorOpen, noteContent, saveCurrentNote, selectedAppointmentId, selectedTemplate]);
-
-  const formatShortDate = (value) => new Intl.DateTimeFormat('en-IE', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date(value));
 
   const historyItems = useMemo(() => {
     const items = [];
@@ -1090,13 +1059,12 @@ export function ClientProfile() {
                           <button
                             type="button"
                             onClick={() => handleDeleteFile(file._id || file.id)}
-                            disabled={fileBusyId === (file._id || file.id)}
                             className="rounded-lg p-2"
                             title="Delete file"
                             aria-label="Delete file"
                             style={{
                               color: theme.colors.error.text,
-                              opacity: fileBusyId === (file._id || file.id) ? 0.5 : 1,
+                              opacity: 1,
                             }}
                           >
                             <TrashIcon />
@@ -1307,11 +1275,12 @@ export function ClientProfile() {
                 )}
               </SectionCard>
 
-              <FormModal
+              <ModalShell
                 isOpen={Boolean(viewingNote)}
                 title="View Note"
                 onClose={() => setViewingNote(null)}
                 maxWidthClass="max-w-2xl"
+                className="max-h-[90vh] overflow-y-auto"
               >
                 <div className="mb-4 border-b pb-4" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9) }}>
                   <p className="text-sm font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
@@ -1326,102 +1295,15 @@ export function ClientProfile() {
                     {viewingNote?.content || 'No content'}
                   </p>
                 </div>
-              </FormModal>
+              </ModalShell>
 
-              <FormModal
+              <ClientAppointmentDetailsModal
                 isOpen={Boolean(viewingAppointment)}
-                title="Appointment Details"
                 onClose={closeAppointmentDetailsModal}
-                maxWidthClass="max-w-2xl"
-              >
-                {viewingAppointment ? (
-                  <div className="space-y-5">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="rounded-2xl border p-4" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9), backgroundColor: withAlpha(theme.colors.gray[50], 0.78) }}>
-                        <p className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6) }}>Client</p>
-                        <p className="mt-1 text-base font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
-                          {getClientName(client)}
-                        </p>
-                      </div>
-
-                      <div className="rounded-2xl border p-4" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9), backgroundColor: withAlpha(theme.colors.gray[50], 0.78) }}>
-                        <p className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6) }}>Date &amp; Time</p>
-                        <p className="mt-1 text-base font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
-                          {formatLongDate(new Date(viewingAppointment.date))}
-                        </p>
-                        <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.8) }}>
-                          {viewingAppointment.startTime} - {viewingAppointment.endTime}
-                        </p>
-                      </div>
-
-                      <div className="rounded-2xl border p-4" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9), backgroundColor: withAlpha(theme.colors.gray[50], 0.78) }}>
-                        <p className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6) }}>Session</p>
-                        <p className="mt-1 text-base font-semibold capitalize" style={{ color: theme.colors.secondary.charcoal }}>
-                          {viewingAppointment.type === 'online' ? 'Online' : 'In-person'}
-                        </p>
-                        <p className="text-sm capitalize" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.8) }}>
-                          {viewingAppointment.status || 'scheduled'}
-                        </p>
-                      </div>
-
-                      <div className="rounded-2xl border p-4" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9), backgroundColor: withAlpha(theme.colors.gray[50], 0.78) }}>
-                        <p className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6) }}>Payment Link</p>
-                        <p className="mt-1 text-base font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
-                          {getPaymentLinkTimingLabel(viewingAppointment.paymentLinkTiming)}
-                        </p>
-                        <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.8) }}>
-                          {viewingAppointment.quotedAmount ? formatCurrency(viewingAppointment.quotedAmount) : 'No amount set'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="rounded-2xl border p-4" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9), backgroundColor: withAlpha(theme.colors.gray[50], 0.74) }}>
-                      <h3 className="text-sm font-semibold uppercase tracking-[0.14em]" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6) }}>
-                        Appointment Notes
-                      </h3>
-
-                      <div className="mt-3 space-y-3">
-                        {getAppointmentNotes(viewingAppointment, notes).length > 0 ? (
-                          getAppointmentNotes(viewingAppointment, notes).map((note) => (
-                            <div
-                              key={note.id || note._id}
-                              className="rounded-xl border px-3 py-3"
-                              style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.85), backgroundColor: theme.colors.gray[50] }}
-                            >
-                              <div className="flex flex-wrap items-center justify-between gap-2">
-                                <p className="text-sm font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
-                                  {note.templateType || 'Note'}
-                                </p>
-                                <p className="text-xs" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.62) }}>
-                                  {note.createdAt ? formatLongDate(new Date(note.createdAt)) : ''}
-                                </p>
-                              </div>
-                              <p className="mt-2 text-sm leading-6" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.85) }}>
-                                {note.content}
-                              </p>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.58) }}>
-                            No notes attached to this appointment.
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-end">
-                      <button
-                        type="button"
-                        onClick={closeAppointmentDetailsModal}
-                        className="rounded-xl px-4 py-2 text-sm font-semibold"
-                        style={{ backgroundColor: theme.colors.primary.DEFAULT, color: theme.colors.gray[50] }}
-                      >
-                        Close
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
-              </FormModal>
+                appointment={viewingAppointment}
+                clientName={clientName}
+                notes={notes}
+              />
 
               <div className="rounded-3xl p-6" style={componentStyles.card}>
                 <div className="mb-4 flex items-center justify-between gap-3">
@@ -1487,178 +1369,19 @@ export function ClientProfile() {
         </div>
       </main>
 
-      <FormModal
+      <ClientFormModal
         isOpen={showEditClientModal}
         title="Edit Client"
         onClose={closeEditClientModal}
         closeDisabled={editClientBusy}
-      >
-        <form className="space-y-4" onSubmit={handleSaveClientDetails}>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-                    First Name <span style={{ color: theme.colors.error.text }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={editClientForm.firstName}
-                    onChange={(event) => setEditClientForm((current) => ({ ...current, firstName: event.target.value }))}
-                    placeholder="First name"
-                    required
-                    className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-                    style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-                    Last Name <span style={{ color: theme.colors.error.text }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={editClientForm.lastName}
-                    onChange={(event) => setEditClientForm((current) => ({ ...current, lastName: event.target.value }))}
-                    placeholder="Last name"
-                    required
-                    className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-                    style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-                  Email <span style={{ color: theme.colors.error.text }}>*</span>
-                </label>
-                <input
-                  type="email"
-                  value={editClientForm.email}
-                  onChange={(event) => setEditClientForm((current) => ({ ...current, email: event.target.value }))}
-                  required
-                  className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-                  style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-                  Phone <span style={{ color: theme.colors.error.text }}>*</span>
-                </label>
-                <input
-                  type="tel"
-                  value={editClientForm.phone}
-                  onChange={(event) => setEditClientForm((current) => ({ ...current, phone: event.target.value }))}
-                  required
-                  className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-                  style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-                  Date of Birth <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
-                </label>
-                <input
-                  type="date"
-                  value={editClientForm.dateOfBirth}
-                  onChange={(event) => setEditClientForm((current) => ({ ...current, dateOfBirth: event.target.value }))}
-                  max={todayDateKey}
-                  className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-                  style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-                  Address <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
-                </label>
-                <input
-                  type="text"
-                  value={editClientForm.address}
-                  onChange={(event) => setEditClientForm((current) => ({ ...current, address: event.target.value }))}
-                  className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-                  style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-                  Profile Notes <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
-                </label>
-                <textarea
-                  value={editClientForm.profileNotes}
-                  onChange={(event) => setEditClientForm((current) => ({ ...current, profileNotes: event.target.value }))}
-                  rows={4}
-                  maxLength={2000}
-                  className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-                  style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-                />
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-                    Emergency Contact Name <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={editClientForm.emergencyContactName}
-                    onChange={(event) => setEditClientForm((current) => ({ ...current, emergencyContactName: event.target.value }))}
-                    className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-                    style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-                    Emergency Contact Phone <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
-                  </label>
-                  <input
-                    type="tel"
-                    value={editClientForm.emergencyContactPhone}
-                    onChange={(event) => setEditClientForm((current) => ({ ...current, emergencyContactPhone: event.target.value }))}
-                    className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-                    style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-                  />
-                </div>
-              </div>
-
-              {editClientMessage && (
-                <div
-                  className="rounded-xl px-3 py-2 text-sm"
-                  style={{
-                    backgroundColor: withAlpha(theme.colors.error.bg, 0.9),
-                    border: `1px solid ${theme.colors.error.border}`,
-                    color: theme.colors.error.text,
-                  }}
-                >
-                  {editClientMessage}
-                </div>
-              )}
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={closeEditClientModal}
-                  disabled={editClientBusy}
-                  className="rounded-xl px-4 py-2 text-sm font-medium"
-                  style={{ backgroundColor: withAlpha(theme.colors.secondary.beige, 0.7), color: theme.colors.secondary.charcoal }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={editClientBusy}
-                  className="rounded-xl px-4 py-2 text-sm font-semibold"
-                  style={{
-                    backgroundColor: editClientBusy ? theme.colors.primary.light : theme.colors.primary.DEFAULT,
-                    color: theme.colors.gray[50],
-                  }}
-                >
-                  {editClientBusy ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
-        </form>
-      </FormModal>
+        form={editClientForm}
+        setForm={setEditClientForm}
+        onSubmit={handleSaveClientDetails}
+        isBusy={editClientBusy}
+        message={editClientMessage}
+        todayDateKey={todayDateKey}
+        submitLabel="Save Changes"
+      />
 
       <ConfirmModal
         isOpen={showDeleteClientModal}

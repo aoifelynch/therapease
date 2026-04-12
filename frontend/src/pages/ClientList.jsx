@@ -4,8 +4,9 @@ import { AppSidebar } from '../components/AppSidebar';
 import { PageHeader } from '../components/PageHeader';
 import { PageTitleRow } from '../components/PageTitleRow';
 import { ErrorAlert } from '../components/ErrorAlert';
-import { FormModal } from '../components/FormModal';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { ClientFormModal } from '../components/client/ClientFormModal';
+import { ClientListControls } from '../components/client/ClientListControls';
 import { useLiveNow } from '../hooks/useLiveNow';
 import { SectionCard } from '../components/SectionCard';
 import { AppDataTable } from '../components/AppDataTable';
@@ -15,38 +16,7 @@ import { theme } from '../utils/theme';
 import { withAlpha } from '../utils/formatters';
 import { componentStyles } from '../utils/componentStyles';
 import { EditIcon, TrashIcon } from '../utils/icons';
-
-const getAppointmentDateTime = (appointment) => {
-	if (!appointment?.date) return null;
-
-	const value = new Date(appointment.date);
-	if (appointment.startTime) {
-		const [hours, minutes] = String(appointment.startTime).split(':').map(Number);
-		if (!Number.isNaN(hours) && !Number.isNaN(minutes)) {
-			value.setHours(hours, minutes, 0, 0);
-		}
-	}
-
-	return Number.isNaN(value.getTime()) ? null : value;
-};
-
-const formatAppointmentDate = (value) => {
-	if (!value) return 'No appointment';
-
-	return new Intl.DateTimeFormat('en-IE', {
-		month: 'long',
-		day: 'numeric',
-		year: 'numeric',
-	}).format(value);
-};
-
-const getTodayDateKey = () => {
-	const date = new Date();
-	const year = date.getFullYear();
-	const month = String(date.getMonth() + 1).padStart(2, '0');
-	const day = String(date.getDate()).padStart(2, '0');
-	return `${year}-${month}-${day}`;
-};
+import { formatAppointmentDate, getAppointmentDateTime, getTodayDateKey } from '../utils/clientListUtils';
 
 export function ClientList() {
 	const { user } = useAuth();
@@ -540,90 +510,17 @@ export function ClientList() {
 					<ErrorAlert message={error} />
 
 					<SectionCard paddingClassName="p-5 md:p-6" bodyClassName="space-y-0">
-						<div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-							<label className="relative block w-full max-w-md">
-								<span className="sr-only">Search clients</span>
-								<input
-									type="search"
-									value={searchTerm}
-									onChange={(event) => setSearchTerm(event.target.value)}
-									placeholder="Search"
-									className="w-full rounded-xl border bg-white py-2 pl-3 pr-10 text-sm outline-none transition focus:ring-2"
-									style={{
-										borderColor: componentStyles.border,
-										color: theme.colors.secondary.charcoal,
-									}}
-								/>
-								<span
-									className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
-									style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.55) }}
-								>
-									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4" aria-hidden="true">
-										<circle cx="11" cy="11" r="7" />
-										<path d="m20 20-3.5-3.5" />
-									</svg>
-								</span>
-							</label>
-
-							<div className="relative">
-								<button
-									type="button"
-									onClick={() => setShowFilters((current) => !current)}
-									className="inline-flex items-center gap-2 rounded-xl border bg-white px-4 py-2 text-sm font-medium"
-									style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-								>
-									Filter / Sort
-									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4" aria-hidden="true">
-										<path d="m6 9 6 6 6-6" />
-									</svg>
-								</button>
-
-								{showFilters && (
-									<div
-										className="absolute right-0 top-full z-20 mt-2 w-64 rounded-2xl border bg-white p-3 shadow-lg"
-										style={{ borderColor: componentStyles.border }}
-									>
-										<p className="px-1 pb-1 text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.52) }}>
-											Sort
-										</p>
-										{sortOptions.map((option) => (
-											<label key={option.value} className="flex items-center gap-2 px-1 py-1.5 text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.85) }}>
-												<input
-													type="radio"
-													name="client-sort"
-													checked={sortBy === option.value}
-													onChange={() => setSortBy(option.value)}
-													className="h-4 w-4 border"
-												/>
-												{option.label}
-											</label>
-										))}
-
-										<div className="my-2 h-px" style={{ backgroundColor: withAlpha(theme.colors.secondary.beige, 0.8) }} />
-
-										<p className="px-1 pb-1 text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.52) }}>
-											Filters
-										</p>
-										{[
-											['upcomingAppointment', 'Has upcoming appointment'],
-											['actionsNeeded', 'Actions needed'],
-											['active', 'Active'],
-											['inactive', 'Inactive'],
-										].map(([key, label]) => (
-											<label key={key} className="flex items-center gap-2 px-1 py-1.5 text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.85) }}>
-												<input
-													type="checkbox"
-													checked={filters[key]}
-													onChange={() => toggleFilter(key)}
-													className="h-4 w-4 rounded border"
-												/>
-												{label}
-											</label>
-										))}
-									</div>
-								)}
-							</div>
-						</div>
+						<ClientListControls
+							searchTerm={searchTerm}
+							onSearchTermChange={setSearchTerm}
+							showFilters={showFilters}
+							onToggleFilters={() => setShowFilters((current) => !current)}
+							sortOptions={sortOptions}
+							sortBy={sortBy}
+							onSortByChange={setSortBy}
+							filters={filters}
+							onToggleFilter={toggleFilter}
+						/>
 
 						<div className="overflow-hidden rounded-2xl border" style={{ borderColor: componentStyles.subtleBorder }}>
 							<AppDataTable
@@ -707,372 +604,44 @@ export function ClientList() {
 					</SectionCard>
 				</div>
 			</main>
-			<FormModal
+			<ClientFormModal
 				isOpen={showCreateModal}
 				title="Add Client"
 				onClose={closeCreateModal}
 				closeDisabled={createBusy}
-			>
-				<form className="space-y-4" onSubmit={handleCreateClient}>
-							<div className="grid grid-cols-2 gap-3">
-								<div>
-									<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-										First Name <span style={{ color: theme.colors.error.text }}>*</span>
-									</label>
-									<input
-										type="text"
-										value={createForm.firstName}
-										onChange={(event) => setCreateForm((current) => ({ ...current, firstName: event.target.value }))}
-										placeholder="First name"
-										required
-										className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-										style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-									/>
-								</div>
-
-								<div>
-									<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-										Last Name <span style={{ color: theme.colors.error.text }}>*</span>
-									</label>
-									<input
-										type="text"
-										value={createForm.lastName}
-										onChange={(event) => setCreateForm((current) => ({ ...current, lastName: event.target.value }))}
-										placeholder="Last name"
-										required
-										className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-										style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-									/>
-								</div>
-							</div>
-
-							<div>
-								<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-									Email <span style={{ color: theme.colors.error.text }}>*</span>
-								</label>
-								<input
-									type="email"
-									value={createForm.email}
-									onChange={(event) => setCreateForm((current) => ({ ...current, email: event.target.value }))}
-									placeholder="client@email.com"
-									required
-									className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-									style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-								/>
-							</div>
-
-							<div>
-								<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-									Phone <span style={{ color: theme.colors.error.text }}>*</span>
-								</label>
-								<input
-									type="tel"
-									value={createForm.phone}
-									onChange={(event) => setCreateForm((current) => ({ ...current, phone: event.target.value }))}
-									placeholder="+353..."
-									required
-									className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-									style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-								/>
-							</div>
-
-							<div>
-								<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-								Date of Birth <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
-							</label>
-							<input
-								type="date"
-								value={createForm.dateOfBirth}
-								onChange={(event) => setCreateForm((current) => ({ ...current, dateOfBirth: event.target.value }))}
-								max={todayDateKey}
-								className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-								style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-							/>
-						</div>
-
-						<div>
-							<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-								Address <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
-							</label>
-							<input
-								type="text"
-								value={createForm.address}
-								onChange={(event) => setCreateForm((current) => ({ ...current, address: event.target.value }))}
-								placeholder="Home address"
-								className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-								style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-							/>
-						</div>
-
-						<div>
-							<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-								Profile Notes <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
-							</label>
-							<textarea
-								value={createForm.profileNotes}
-								onChange={(event) => setCreateForm((current) => ({ ...current, profileNotes: event.target.value }))}
-								placeholder="Add profile notes..."
-								rows={4}
-								maxLength={2000}
-								className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-								style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-							/>
-						</div>
-
-						<div className="grid gap-3 md:grid-cols-2">
-							<div>
-								<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-									Emergency Contact Name <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
-								</label>
-								<input
-									type="text"
-									value={createForm.emergencyContactName}
-									onChange={(event) => setCreateForm((current) => ({ ...current, emergencyContactName: event.target.value }))}
-									placeholder="Emergency contact"
-									className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-									style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-								/>
-							</div>
-							<div>
-								<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-									Emergency Contact Phone <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
-								</label>
-								<input
-									type="tel"
-									value={createForm.emergencyContactPhone}
-									onChange={(event) => setCreateForm((current) => ({ ...current, emergencyContactPhone: event.target.value }))}
-									placeholder="+353..."
-									className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-									style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-								/>
-							</div>
-						</div>
-
-							{createMessage && (
-								<div
-									className="rounded-xl px-3 py-2 text-sm"
-									style={{
-										backgroundColor: withAlpha(theme.colors.error.bg, 0.9),
-										border: `1px solid ${theme.colors.error.border}`,
-										color: theme.colors.error.text,
-									}}
-								>
-									{createMessage}
-								</div>
-							)}
-
-							<div className="flex items-center justify-end gap-2 pt-2">
-								<button
-									type="button"
-									onClick={closeCreateModal}
-									disabled={createBusy}
-									className="rounded-xl px-4 py-2 text-sm font-medium"
-									style={{
-										backgroundColor: withAlpha(theme.colors.secondary.beige, 0.7),
-										color: theme.colors.secondary.charcoal,
-										cursor: createBusy ? 'not-allowed' : 'pointer',
-									}}
-								>
-									Cancel
-								</button>
-								<button
-									type="submit"
-									disabled={createBusy}
-									className="rounded-xl px-4 py-2 text-sm font-semibold"
-									style={{
-										backgroundColor: createBusy ? theme.colors.primary.light : theme.colors.primary.DEFAULT,
-										color: theme.colors.gray[50],
-										cursor: createBusy ? 'not-allowed' : 'pointer',
-									}}
-								>
-									{createBusy ? 'Saving...' : 'Create Client'}
-								</button>
-							</div>
-				</form>
-			</FormModal>
-			<FormModal
+				form={createForm}
+				setForm={setCreateForm}
+				onSubmit={handleCreateClient}
+				isBusy={createBusy}
+				message={createMessage}
+				todayDateKey={todayDateKey}
+				submitLabel="Create Client"
+				emailPlaceholder="client@email.com"
+				phonePlaceholder="+353..."
+				addressPlaceholder="Home address"
+				profileNotesPlaceholder="Add profile notes..."
+				emergencyContactNamePlaceholder="Emergency contact"
+				emergencyContactPhonePlaceholder="+353..."
+			/>
+			<ClientFormModal
 				isOpen={showEditModal}
 				title="Edit Client"
 				onClose={closeEditModal}
 				closeDisabled={editBusy}
-			>
-				<form className="space-y-4" onSubmit={handleEditClient}>
-							<div className="grid grid-cols-2 gap-3">
-								<div>
-									<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-										First Name <span style={{ color: theme.colors.error.text }}>*</span>
-									</label>
-									<input
-										type="text"
-										value={editForm.firstName}
-										onChange={(event) => setEditForm((current) => ({ ...current, firstName: event.target.value }))}
-										placeholder="First name"
-										required
-										className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-										style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-									/>
-								</div>
-
-								<div>
-									<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-										Last Name <span style={{ color: theme.colors.error.text }}>*</span>
-									</label>
-									<input
-										type="text"
-										value={editForm.lastName}
-										onChange={(event) => setEditForm((current) => ({ ...current, lastName: event.target.value }))}
-										placeholder="Last name"
-										required
-										className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-										style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-									/>
-								</div>
-							</div>
-
-							<div>
-								<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-									Email <span style={{ color: theme.colors.error.text }}>*</span>
-								</label>
-								<input
-									type="email"
-									value={editForm.email}
-									onChange={(event) => setEditForm((current) => ({ ...current, email: event.target.value }))}
-									placeholder="client@email.com"
-									required
-									className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-									style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-								/>
-							</div>
-
-							<div>
-								<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-									Phone <span style={{ color: theme.colors.error.text }}>*</span>
-								</label>
-								<input
-									type="tel"
-									value={editForm.phone}
-									onChange={(event) => setEditForm((current) => ({ ...current, phone: event.target.value }))}
-									placeholder="+353..."
-									required
-									className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-									style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-								/>
-							</div>
-
-							<div>
-								<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-								Date of Birth <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
-							</label>
-							<input
-								type="date"
-								value={editForm.dateOfBirth}
-								onChange={(event) => setEditForm((current) => ({ ...current, dateOfBirth: event.target.value }))}
-								max={todayDateKey}
-								className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-								style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-							/>
-						</div>
-
-						<div>
-							<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-								Address <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
-							</label>
-							<input
-								type="text"
-								value={editForm.address}
-								onChange={(event) => setEditForm((current) => ({ ...current, address: event.target.value }))}
-								placeholder="Home address"
-								className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-								style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-							/>
-						</div>
-
-						<div>
-							<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-								Profile Notes <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
-							</label>
-							<textarea
-								value={editForm.profileNotes}
-								onChange={(event) => setEditForm((current) => ({ ...current, profileNotes: event.target.value }))}
-								placeholder="Add profile notes..."
-								rows={4}
-								maxLength={2000}
-								className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-								style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-							/>
-						</div>
-
-						<div className="grid gap-3 md:grid-cols-2">
-							<div>
-								<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-									Emergency Contact Name <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
-								</label>
-								<input
-									type="text"
-										value={editForm.emergencyContactName}
-										onChange={(event) => setEditForm((current) => ({ ...current, emergencyContactName: event.target.value }))}
-										placeholder="Emergency contact"
-										className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-										style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-									/>
-								</div>
-								<div>
-									<label className="mb-1 block text-sm font-medium" style={{ color: theme.colors.secondary.charcoal }}>
-										Emergency Contact Phone <span style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6), fontWeight: 400 }}>(Optional)</span>
-									</label>
-									<input
-										type="tel"
-										value={editForm.emergencyContactPhone}
-										onChange={(event) => setEditForm((current) => ({ ...current, emergencyContactPhone: event.target.value }))}
-										placeholder="+353..."
-										className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none"
-										style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
-									/>
-								</div>
-							</div>
-
-							{editMessage && (
-								<div
-									className="rounded-xl px-3 py-2 text-sm"
-									style={{
-										backgroundColor: withAlpha(theme.colors.error.bg, 0.9),
-										border: `1px solid ${theme.colors.error.border}`,
-										color: theme.colors.error.text,
-									}}
-								>
-									{editMessage}
-								</div>
-							)}
-
-							<div className="flex items-center justify-end gap-2 pt-2">
-								<button
-									type="button"
-									onClick={closeEditModal}
-									disabled={editBusy}
-									className="rounded-xl px-4 py-2 text-sm font-medium"
-									style={{
-										backgroundColor: withAlpha(theme.colors.secondary.beige, 0.7),
-										color: theme.colors.secondary.charcoal,
-										cursor: editBusy ? 'not-allowed' : 'pointer',
-									}}
-								>
-									Cancel
-								</button>
-								<button
-									type="submit"
-									disabled={editBusy}
-									className="rounded-xl px-4 py-2 text-sm font-semibold"
-									style={{
-										backgroundColor: editBusy ? theme.colors.primary.light : theme.colors.primary.DEFAULT,
-										color: theme.colors.gray[50],
-										cursor: editBusy ? 'not-allowed' : 'pointer',
-									}}
-								>
-									{editBusy ? 'Saving...' : 'Save Changes'}
-								</button>
-							</div>
-				</form>
-			</FormModal>
+				form={editForm}
+				setForm={setEditForm}
+				onSubmit={handleEditClient}
+				isBusy={editBusy}
+				message={editMessage}
+				todayDateKey={todayDateKey}
+				submitLabel="Save Changes"
+				emailPlaceholder="client@email.com"
+				phonePlaceholder="+353..."
+				addressPlaceholder="Home address"
+				profileNotesPlaceholder="Add profile notes..."
+				emergencyContactNamePlaceholder="Emergency contact"
+				emergencyContactPhonePlaceholder="+353..."
+			/>
 			<ConfirmModal
 				isOpen={showDeleteModal}
 				title="Delete Client"

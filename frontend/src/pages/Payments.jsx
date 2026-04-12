@@ -13,7 +13,7 @@ import { AppSidebar } from '../components/AppSidebar';
 import { PageHeader } from '../components/PageHeader';
 import { PageTitleRow } from '../components/PageTitleRow';
 import { ErrorAlert } from '../components/ErrorAlert';
-import { FormModal } from '../components/FormModal';
+import { ModalShell } from '../components/ModalShell';
 import { useLiveNow } from '../hooks/useLiveNow';
 import { StatCard } from '../components/StatCard';
 import { AppDataTable } from '../components/AppDataTable';
@@ -673,11 +673,12 @@ export function Payments() {
 				</div>
 			</main>
 
-			<FormModal
+			<ModalShell
 				isOpen={showCreateLinkModal}
 				title="Create Payment Link"
 				onClose={closeCreateLinkModal}
 				closeDisabled={createLinkBusy}
+				className="max-h-[90vh] overflow-y-auto"
 			>
 				<form className="space-y-4" onSubmit={handleCreatePaymentLink}>
 					<div>
@@ -758,7 +759,7 @@ export function Payments() {
 						</button>
 					</div>
 				</form>
-			</FormModal>
+			</ModalShell>
 		</div>
 	);
 }
