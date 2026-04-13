@@ -11,7 +11,7 @@ import { AppDataTable } from '../components/AppDataTable';
 import { appointmentsAPI, clientsAPI, paymentsAPI, remindersAPI, todosAPI } from '../api/api';
 import { useAuth } from '../context/AuthContext';
 import { theme } from '../utils/theme';
-import { withAlpha, isSameDay, startOfWeek, startOfMonth, formatCurrency, formatLongDate, formatTime, getClientName } from '../utils/formatters';
+import { withAlpha, isSameDay, startOfWeek, startOfMonth, formatCurrency, formatLongDate, formatClock, getClientName } from '../utils/formatters';
 import { componentStyles } from '../utils/componentStyles';
 import { quickActions } from '../constants/sidebarConstants';
 import {
@@ -37,6 +37,7 @@ export function Dashboard() {
   const [todoToDelete, setTodoToDelete] = useState(null);
   const [deleteTodoBusy, setDeleteTodoBusy] = useState(false);
   const [deleteTodoMessage, setDeleteTodoMessage] = useState('');
+  const [reminderTypeFilter, setReminderTypeFilter] = useState('no-filter');
   const now = useLiveNow();
 
   useEffect(() => {
@@ -78,6 +79,21 @@ export function Dashboard() {
     const value = new Date(appointment.date);
     value.setHours(hours, minutes, 0, 0);
     return Number.isNaN(value.getTime()) ? null : value;
+  };
+
+  const formatAppointmentTimeRange = (appointment) => {
+    const appointmentStartTime = toAppointmentDateTime(appointment, appointment.startTime);
+    const appointmentEndTime = toAppointmentDateTime(appointment, appointment.endTime);
+
+    if (appointmentStartTime && appointmentEndTime) {
+      return `${formatClock(appointmentStartTime)} - ${formatClock(appointmentEndTime)}`;
+    }
+
+    if (appointmentStartTime) {
+      return formatClock(appointmentStartTime);
+    }
+
+    return formatClock(new Date(appointment.date));
   };
 
   const todayAppointments = appointments.filter((appointment) => isSameDay(new Date(appointment.date), now));
@@ -179,7 +195,7 @@ export function Dashboard() {
 
   const focusedClientId = location.state?.clientId || null;
   const focusedReminderType = location.state?.reminderType || null;
-  
+
   const prioritizedRemindersByClient = useMemo(() => {
     if (!focusedClientId && !focusedReminderType) return remindersByClient;
 
@@ -193,6 +209,23 @@ export function Dashboard() {
       return firstMatch ? -1 : 1;
     });
   }, [remindersByClient, focusedClientId, focusedReminderType]);
+
+  const filteredRemindersByClient = useMemo(() => {
+    if (reminderTypeFilter === 'no-filter') {
+      return prioritizedRemindersByClient;
+    }
+
+    return prioritizedRemindersByClient.filter((reminderGroup) => {
+      const reminderTypes = new Set((reminderGroup.rawReminders || []).map((reminder) => reminder.type));
+
+      if (reminderTypeFilter === 'missing-notes') {
+        return reminderTypes.has('missing-notes') || reminderGroup.type === 'missing-notes';
+      }
+
+      return Array.from(reminderTypes).some((type) => type && type !== 'missing-notes')
+        || (reminderGroup.type && reminderGroup.type !== 'missing-notes');
+    });
+  }, [prioritizedRemindersByClient, reminderTypeFilter]);
 
   useEffect(() => {
     const shouldFocusReminders = location.hash === '#reminders' || location.state?.focusReminders;
@@ -382,16 +415,16 @@ export function Dashboard() {
           {/* Appointments & Revenue */}
           <section className="grid gap-4 xl:grid-cols-[2.5fr_0.9fr]">
             {/* Appointments Table */}
-            <SectionCard title="Today's Upcoming Appointments" bodyClassName="space-y-0">
+            <SectionCard title="Today's Upcoming Appointments" bodyClassName="space-y-0" paddingClassName="p-6 pb-3">
               <AppDataTable
-                tableClassName="text-[0.95rem]"
+                tableClassName="text-base"
                 headerCellClassName="text-[0.8rem]"
                 columns={[
-                  { key: 'time', label: 'Time', widthClassName: 'w-[15%]', headerClassName: 'pl-4 pr-3' },
-                  { key: 'client', label: 'Client', widthClassName: 'w-[26%]', headerClassName: 'pl-2 pr-2' },
-                  { key: 'location', label: 'Location', widthClassName: 'w-[24%]', headerClassName: '!px-2' },
-                  { key: 'status', label: 'Status', widthClassName: 'w-[18%]' },
-                  { key: 'action', label: 'Action', widthClassName: 'w-[17%]', headerClassName: 'pl-2 pr-4' },
+                  { key: 'time', label: 'Time', widthClassName: 'w-[20%]', headerClassName: 'pl-4 pr-3' },
+                  { key: 'client', label: 'Client', widthClassName: 'w-[20%]', headerClassName: 'pl-2 pr-2' },
+                  { key: 'location', label: 'Location', widthClassName: 'w-[20%]', headerClassName: 'pl-2 pr-1' },
+                  { key: 'status', label: 'Status', widthClassName: 'w-[20%]', headerClassName: 'pl-1 pr-2' },
+                  { key: 'action', label: 'Action', widthClassName: 'w-[16%]', headerClassName: 'pl-2 pr-3' },
                 ]}
                 rows={dashboardUpcomingAppointments}
                 rowKey={(appointment) => appointment._id || appointment.id}
@@ -405,7 +438,7 @@ export function Dashboard() {
 
                   return (
                     <>
-                      <td className="py-3 pl-4 pr-3 font-medium" style={{ color: theme.colors.secondary.charcoal }}>{formatTime(appointment)}</td>
+                      <td className="py-3 pl-4 pr-3 font-medium" style={{ color: theme.colors.secondary.charcoal }}>{formatAppointmentTimeRange(appointment)}</td>
                       <td className="px-2 py-3">
                         {appointmentClientId ? (
                           <Link
@@ -419,45 +452,46 @@ export function Dashboard() {
                           <span className="font-medium" style={{ color: theme.colors.secondary.charcoal }}>{clientName}</span>
                         )}
                       </td>
-                      <td className="!px-2 py-3">{appointment.type === 'online' ? 'Online' : 'In-person'}</td>
-                      <td className="px-2 py-3">
+                      <td className="py-3 pl-2 pr-1">{appointment.type === 'online' ? 'Online' : 'In-person'}</td>
+                      <td className="py-3 pl-1 pr-2">
                         <span className="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize" style={{ backgroundColor: tone.background, color: tone.color }}>
                           {appointment.status}
                         </span>
                       </td>
                       <td className="py-3 pr-4">
                         <div className="flex items-center justify-start gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteAppointmentFromDashboard(appointmentId)}
-                            className="inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-semibold"
-                            style={{ backgroundColor: withAlpha(theme.colors.error.bg, 0.92), color: theme.colors.error.text }}
-                          >
-                            <TrashIcon />
-                            Delete
-                          </button>
+                          
 
                           {hasZoom ? (
                             <a
                               href={appointment.zoomLink}
                               target="_blank"
                               rel="noreferrer"
-                              className="inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-semibold"
+                              className="inline-flex items-center gap-1 whitespace-nowrap rounded-xl px-2.5 py-1.5 text-xs font-semibold"
                               style={{ backgroundColor: withAlpha(theme.colors.primary.DEFAULT, 0.16), color: theme.colors.primary.darker }}
                             >
                               <ExternalLinkIcon />
-                              Join Zoom
+                              Join
                             </a>
                           ) : (
                             <button
                               type="button"
-                              className="inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-semibold"
+                              className="inline-flex items-center gap-1 whitespace-nowrap rounded-xl px-2.5 py-1.5 text-xs font-semibold"
                               style={{ backgroundColor: withAlpha(theme.colors.secondary.beige, 0.65), color: theme.colors.secondary.charcoal }}
                             >
                               <EditIcon />
                               View
                             </button>
                           )}
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAppointmentFromDashboard(appointmentId)}
+                            className="inline-flex items-center gap-1 whitespace-nowrap rounded-xl px-2.5 py-1.5 text-xs font-semibold"
+                            style={{ backgroundColor: withAlpha(theme.colors.error.bg, 0.92), color: theme.colors.error.text }}
+                          >
+                            <TrashIcon />
+                            Delete
+                          </button>
                         </div>
                       </td>
                     </>
@@ -471,7 +505,7 @@ export function Dashboard() {
               />
 
               {!loading && hasMoreUpcomingAppointments && (
-                <div className="mt-3 flex justify-end">
+                <div className="pt-2 pr-3 flex justify-end">
                   <Link
                     to={`/calendar?view=timeGridWeek&date=${now.toISOString().slice(0, 10)}`}
                     className="inline-flex items-center gap-1 text-xs font-semibold no-underline transition-opacity hover:opacity-80"
@@ -485,43 +519,78 @@ export function Dashboard() {
             </SectionCard>
 
             {/* Revenue Overview */}
-            <SectionCard title="Revenue Overview" bodyClassName="space-y-0">
+            <SectionCard
+              title="Revenue Overview"
+              className="h-full flex flex-col"
+              bodyClassName="flex-1 flex flex-col"
+              paddingClassName="p-6"
+            >
 
-              <div className="mb-5">
+              <div className="border-b pb-5" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9) }}>
                 <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.58) }}>Weekly</p>
                 <p className="text-2xl font-semibold" style={{ color: theme.colors.secondary.charcoal }}>{formatCurrency(weeklyRevenue)}</p>
                 <div className="mt-2 flex items-center gap-2" style={{ color: theme.colors.primary.DEFAULT }}>
                   <ArrowUpIcon />
-                  <span className="text-xs font-medium">Paid sessions since {formatLongDate(startWeek)}</span>
+                  <span className="text-sm font-medium">Paid sessions since {formatLongDate(startWeek)}</span>
                 </div>
               </div>
 
-              <div className="border-t pt-4" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9) }}>
+              <div className="mt-5">
                 <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.58) }}>Monthly</p>
                 <p className="text-2xl font-semibold" style={{ color: theme.colors.secondary.charcoal }}>{formatCurrency(monthlyRevenue)}</p>
                 <div className="mt-2 flex items-center gap-2" style={{ color: theme.colors.primary.DEFAULT }}>
                   <ArrowUpIcon />
-                  <span className="text-xs font-medium">Paid sessions this month</span>
+                  <span className="text-sm font-medium">Paid sessions this month</span>
                 </div>
+              </div>
+
+              <div className="mt-auto pt-5 flex justify-end">
+                <Link
+                  to="/payments"
+                  className="inline-flex items-center gap-1 text-xs font-semibold no-underline transition-opacity hover:opacity-80"
+                  style={{ color: theme.colors.primary.darker }}
+                >
+                  See More
+                  <span aria-hidden="true">→</span>
+                </Link>
               </div>
             </SectionCard>
           </section>
 
           {/* Reminders & To-Do */}
-          <section className="grid gap-4 xl:grid-cols-2">
+          <section className="grid items-start gap-4 xl:grid-cols-2">
             {/* Reminders */}
             <SectionCard
               title="Reminders"
               action={(
-                <span className="text-xs font-medium uppercase tracking-[0.16em]" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.5) }}>
-                  {allReminders.length} total
-                </span>
+                <div className="flex items-center gap-2">
+                  <label htmlFor="dashboard-reminder-type-filter" className="sr-only">Filter reminders by type</label>
+                  <select
+                    id="dashboard-reminder-type-filter"
+                    value={reminderTypeFilter}
+                    onChange={(event) => setReminderTypeFilter(event.target.value)}
+                    className="min-w-[11.5rem] rounded-lg pl-2.5 pr-7 py-1 text-xs font-medium outline-none"
+                    style={{
+                      backgroundColor: withAlpha(theme.colors.secondary.cream, 0.95),
+                      border: `1px solid ${withAlpha(theme.colors.secondary.beige, 0.95)}`,
+                      color: theme.colors.secondary.charcoal,
+                    }}
+                  >
+                    <option value="no-filter">No filter</option>
+                    <option value="missing-notes">Missing notes</option>
+                    <option value="missing-profile-details">Missing profile details</option>
+                  </select>
+                  <span className="text-xs font-medium uppercase tracking-[0.16em]" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.5) }}>
+                    {allReminders.length} total
+                  </span>
+                </div>
               )}
-              className="scroll-mt-6"
-              bodyClassName="space-y-1.5"
+              className="scroll-mt-6 h-[22rem] flex flex-col"
+              bodyClassName="space-y-1.5 flex-1 overflow-y-auto pr-1"
             >
 
-              {(loading ? [] : prioritizedRemindersByClient.slice(0, 6)).map((reminderGroup) => {
+              <div className="space-y-1.5">
+                {(loading ? [] : filteredRemindersByClient).map((reminderGroup) => {
                   const tone = componentStyles.getReminderTone(reminderGroup.status);
                   const reminderClient = clientLookup[reminderGroup.client] || 'Practice reminder';
                   const isFocusedReminder = Boolean(
@@ -555,10 +624,17 @@ export function Dashboard() {
                     No reminders, you're on top of your session notes and client details!
                   </p>
                 )}
+
+                {!loading && allReminders.length > 0 && filteredRemindersByClient.length === 0 && (
+                  <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.58) }}>
+                    No reminders found for this type.
+                  </p>
+                )}
+              </div>
             </SectionCard>
 
             {/* To-Do List */}
-            <SectionCard title="To-Do List">
+            <SectionCard title="To-Do List" className="h-[22rem] flex flex-col" bodyClassName="flex flex-1 flex-col">
 
               <form onSubmit={handleCreateTodo} className="mb-5 flex gap-3">
                 <input
@@ -587,9 +663,7 @@ export function Dashboard() {
                 </button>
               </form>
 
-              <div
-                className={`space-y-2 ${!loading && todos.length > 7 ? 'max-h-[22rem] overflow-y-auto pr-1' : ''}`}
-              >
+              <div className="mt-1 flex-1 space-y-2 overflow-y-auto pr-1">
                 {(loading ? [] : todos).map((todo) => (
                   <div key={todo.id || todo._id} className="flex items-center gap-2 rounded-xl px-2 py-1.5 transition-colors" style={{ backgroundColor: todo.completed ? withAlpha(theme.colors.secondary.sage, 0.55) : 'transparent' }}>
                     <button
