@@ -129,8 +129,9 @@ export function AppointmentFormModal({
               ))}
             </select>
           </div>
-        </div>
 
+        </div>
+        <p className='text-center text-sm italic' style={{color: theme.colors.primary.darker}}>We will send a reminder text to your client the day before their session.</p>
         {timeMessage && (
           <p className="text-sm" style={{ color: theme.colors.error.text }}>
             {timeMessage}
