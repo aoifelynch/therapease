@@ -18,6 +18,7 @@ import { BackIcon, EditIcon, TrashIcon } from '../utils/icons';
 import {
   formatShortDate,
   getTodayDateKey,
+  getAppointmentNotes,
   isImageFile,
 } from '../utils/clientProfileUtils';
 import { getFormErrorMessage } from '../utils/errorMessages';
@@ -1179,7 +1180,7 @@ export function ClientProfile() {
                                       Click to read full note
                                     </p>
                                   </button>
-                                  <div className="flex items-center gap-1">
+                                  <div className="flex items-center">
                                     <button
                                       type="button"
                                       onClick={() => {
@@ -1325,17 +1326,14 @@ export function ClientProfile() {
 
               <ModalShell
                 isOpen={Boolean(viewingNote)}
-                title="View Note"
+                title={`Session Notes - ${new Intl.DateTimeFormat('en-IE', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(viewingNote?.createdAt || new Date()))}`}
                 onClose={() => setViewingNote(null)}
                 maxWidthClass="max-w-2xl"
                 className="max-h-[90vh] overflow-y-auto"
               >
                 <div className="mb-4 border-b pb-4" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9) }}>
-                  <p className="text-sm font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
-                    {new Intl.DateTimeFormat('en-IE', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(viewingNote?.createdAt || new Date()))}
-                  </p>
                   <p className="text-xs" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.64) }}>
-                    {viewingNote?.templateType || 'Note'}
+                    {viewingNote?.templateType ? `${viewingNote.templateType} Template` : 'No Template Used'}
                   </p>
                 </div>
                 <div className="max-h-[65vh] overflow-y-auto">
@@ -1351,6 +1349,12 @@ export function ClientProfile() {
                 appointment={viewingAppointment}
                 clientName={clientName}
                 notes={notes}
+                appointmentDetailsBusy={false}
+                selectedAppointmentNotes={getAppointmentNotes(viewingAppointment, notes)}
+                onOpenClientNote={(note) => {
+                  setViewingNote(note);
+                  closeAppointmentDetailsModal();
+                }}
               />
 
               <div className="rounded-3xl p-6" style={componentStyles.card}>
