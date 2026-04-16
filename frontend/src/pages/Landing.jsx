@@ -5,6 +5,7 @@ import { theme } from '../utils/theme';
 import { authAPI } from '../api/api';
 import { useAuth } from '../context/AuthContext';
 import { withAlpha } from '../utils/formatters';
+import { getFormErrorMessage } from '../utils/errorMessages';
 
 /* ─── Navbar ─── */
 const Navbar = () => {
@@ -75,7 +76,7 @@ const Hero = () => {
       login(response.user, response.accessToken, response.refreshToken);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Registration failed');
+      setError(getFormErrorMessage(err, 'Registration failed'));
     } finally {
       setLoading(false);
     }

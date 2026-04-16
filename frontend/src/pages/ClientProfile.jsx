@@ -20,6 +20,7 @@ import {
   getTodayDateKey,
   isImageFile,
 } from '../utils/clientProfileUtils';
+import { getFormErrorMessage } from '../utils/errorMessages';
 
 export function ClientProfile() {
   const { clientId } = useParams();
@@ -189,7 +190,7 @@ export function ClientProfile() {
       setClient(response.data);
       setShowEditClientModal(false);
     } catch (requestError) {
-      setEditClientMessage(requestError.response?.data?.message || requestError.message || 'Unable to update client');
+      setEditClientMessage(getFormErrorMessage(requestError, 'Unable to update client'));
     } finally {
       setEditClientBusy(false);
     }
@@ -594,6 +595,28 @@ export function ClientProfile() {
     return historySortOrder === 'newest' ? sorted.reverse() : sorted;
   }, [historyItems, historySortOrder]);
 
+  const availableNoteAppointments = useMemo(() => {
+    const appointmentIdsWithNotes = new Set(
+      notes
+        .map((note) => String(note?.appointment?.id || note?.appointment?._id || note?.appointment || '').trim())
+        .filter(Boolean),
+    );
+
+    return [...appointments]
+      .filter((appointment) => {
+        const appointmentId = String(appointment.id || appointment._id || '').trim();
+        if (!appointmentId) return false;
+
+        // Keep selected appointment visible when editing an existing note.
+        if (appointmentId === String(selectedAppointmentId || '').trim()) {
+          return true;
+        }
+
+        return !appointmentIdsWithNotes.has(appointmentId);
+      })
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [appointments, notes, selectedAppointmentId]);
+
   if (loading) {
     return (
       <div className="flex h-screen overflow-hidden" style={{ backgroundColor: theme.colors.secondary.cream }}>
@@ -639,19 +662,69 @@ export function ClientProfile() {
       <main className="h-screen flex-1 overflow-y-auto">
         <PageHeader userName={user?.name} now={now} />
 
-        <div className="space-y-5 px-6 py-6 md:px-8">
+        <div className="space-y-3 py-3 md:px-8">
           <ErrorAlert message={error} />
 
-          {/* Back button and client header */}
-          <button
-            type="button"
-            onClick={() => navigate('/clients')}
-            className="flex items-center gap-2 text-sm font-medium transition-opacity hover:opacity-70"
-            style={{ color: theme.colors.primary.DEFAULT }}
-          >
-            <BackIcon />
-            Back
-          </button>
+          {/* Top actions row */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => navigate('/clients')}
+              className="flex items-center gap-2 text-sm font-medium transition-opacity hover:opacity-70"
+              style={{ color: theme.colors.primary.DEFAULT }}
+            >
+              <BackIcon />
+              Back
+            </button>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const selectedClientId = client.id || client._id || clientId;
+                  navigate('/calendar', {
+                    state: {
+                      openCreateAppointmentModal: true,
+                      preselectedClientId: String(selectedClientId || ''),
+                    },
+                  });
+                }}
+                className="inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition-colors"
+                style={{ backgroundColor: theme.colors.primary.DEFAULT, color: theme.colors.gray[50] }}
+              >
+                + New Appointment
+              </button>
+              <button
+                type="button"
+                onClick={openEditClientModal}
+                className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors"
+                style={{
+                  backgroundColor: withAlpha(theme.colors.primary.DEFAULT, 0.16),
+                  color: theme.colors.primary.darker,
+                  border: `1px solid ${withAlpha(theme.colors.primary.DEFAULT, 0.42)}`,
+                }}
+              >
+                <EditIcon />
+                Edit
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteClientMessage('');
+                  setShowDeleteClientModal(true);
+                }}
+                className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors"
+                style={{
+                  backgroundColor: theme.colors.error.bg,
+                  color: theme.colors.error.text,
+                  border: `1px solid ${withAlpha(theme.colors.error.text, 0.32)}`,
+                }}
+              >
+                <TrashIcon />
+                Delete
+              </button>
+            </div>
+          </div>
 
           <div className="grid gap-6 xl:grid-cols-[1fr_2fr]">
             {/* Left column - Client info and emergency contact */}
@@ -712,30 +785,6 @@ export function ClientProfile() {
                       <p className="text-base font-medium whitespace-pre-wrap">{client.profileNotes}</p>
                     </div>
                   )}
-                </div>
-
-                <div className="mt-6 pt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={openEditClientModal}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-colors"
-                    style={{ backgroundColor: theme.colors.primary.DEFAULT, color: theme.colors.gray[50] }}
-                  >
-                    <EditIcon />
-                    Edit Client
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDeleteClientMessage('');
-                      setShowDeleteClientModal(true);
-                    }}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-colors"
-                    style={{ backgroundColor: theme.colors.error.bg, color: theme.colors.error.text }}
-                  >
-                    <TrashIcon />
-                    Delete Client
-                  </button>
                 </div>
               </SectionCard>
 
@@ -956,8 +1005,7 @@ export function ClientProfile() {
                             style={{ borderColor: componentStyles.border, color: theme.colors.secondary.charcoal }}
                           >
                             <option value="">Select linked appointment</option>
-                            {[...appointments]
-                              .sort((a, b) => new Date(b.date) - new Date(a.date))
+                            {availableNoteAppointments
                               .map((appointment) => (
                                 <option key={appointment.id || appointment._id} value={appointment.id || appointment._id}>
                                   {new Intl.DateTimeFormat('en-IE', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(appointment.date))}

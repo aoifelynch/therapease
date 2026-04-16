@@ -12,6 +12,7 @@ import { toast } from '../utils/toastBus';
 import { theme } from '../utils/theme';
 import { withAlpha, formatLongDate } from '../utils/formatters';
 import { componentStyles } from '../utils/componentStyles';
+import { getFormErrorMessage } from '../utils/errorMessages';
 
 const faqItems = [
   {
@@ -84,6 +85,8 @@ export function Settings() {
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteModalPassword, setDeleteModalPassword] = useState('');
+  const [profileFormMessage, setProfileFormMessage] = useState('');
+  const [deleteAccountMessage, setDeleteAccountMessage] = useState('');
 
   const [accountForm, setAccountForm] = useState({
     name: user?.name || '',
@@ -111,15 +114,15 @@ export function Settings() {
         if (isMounted && nextUser) {
           setCurrentUser(nextUser);
           updateUser(nextUser);
+          setProfileFormMessage('');
           setAccountForm({
             name: nextUser.name || '',
             email: nextUser.email || '',
           });
         }
       } catch (requestError) {
-        const message = requestError?.response?.data?.message || requestError?.message || 'Unable to load your account details.';
         if (isMounted) {
-          toast.error(message);
+          setProfileFormMessage(getFormErrorMessage(requestError, 'Unable to load your account details.'));
         }
       } finally {
         if (isMounted) {
@@ -137,24 +140,25 @@ export function Settings() {
 
   const handleSaveChanges = async (event) => {
     event.preventDefault();
+    setProfileFormMessage('');
 
     const normalizedName = accountForm.name.trim();
     const normalizedEmail = accountForm.email.trim().toLowerCase();
 
     if (!normalizedName || !normalizedEmail) {
-      toast.error('Name and email are required.');
+      setProfileFormMessage('Name and email are required.');
       return;
     }
 
     const hasPasswordInput = Boolean(passwordForm.currentPassword || passwordForm.nextPassword || passwordForm.confirmPassword);
     if (hasPasswordInput) {
       if (!passwordForm.currentPassword || !passwordForm.nextPassword || !passwordForm.confirmPassword) {
-        toast.error('All password fields are required.');
+        setProfileFormMessage('All password fields are required.');
         return;
       }
 
       if (passwordForm.nextPassword !== passwordForm.confirmPassword) {
-        toast.error('New password and confirmation do not match.');
+        setProfileFormMessage('New password and confirmation do not match.');
         return;
       }
     }
@@ -186,17 +190,17 @@ export function Settings() {
 
       setPasswordForm({ currentPassword: '', nextPassword: '', confirmPassword: '' });
     } catch (requestError) {
-      // API errors are surfaced by the global API error toast interceptor.
-      void requestError;
+      setProfileFormMessage(getFormErrorMessage(requestError, 'Unable to save profile changes.'));
     } finally {
       setSavingProfile(false);
     }
   };
 
   const handleDeleteAccount = async () => {
+    setDeleteAccountMessage('');
     const normalizedPassword = deleteModalPassword.trim();
     if (!normalizedPassword) {
-      toast.error('Please enter your password to delete your account.');
+      setDeleteAccountMessage('Please enter your password to delete your account.');
       return;
     }
 
@@ -206,11 +210,11 @@ export function Settings() {
       await authAPI.deleteAccount(normalizedPassword);
       setDeleteModalOpen(false);
       setDeleteModalPassword('');
+      setDeleteAccountMessage('');
       logout();
       navigate('/login');
     } catch (requestError) {
-      // API errors are surfaced by the global API error toast interceptor.
-      void requestError;
+      setDeleteAccountMessage(getFormErrorMessage(requestError, 'Unable to delete account.'));
     } finally {
       setDeletingAccount(false);
     }
@@ -227,6 +231,7 @@ export function Settings() {
 
   const openDeleteModal = () => {
     setDeleteModalPassword('');
+    setDeleteAccountMessage('');
     setDeleteModalOpen(true);
   };
 
@@ -234,6 +239,7 @@ export function Settings() {
     if (deletingAccount) return;
     setDeleteModalOpen(false);
     setDeleteModalPassword('');
+    setDeleteAccountMessage('');
   };
 
   const handleLogout = () => {
@@ -344,6 +350,19 @@ export function Settings() {
                   </article>
 
                   <SectionCard title="Edit Profile" className="rounded-xl" bodyClassName="space-y-0">
+
+                    {profileFormMessage && (
+                      <div
+                        className="mb-4 rounded-xl px-3 py-2 text-sm"
+                        style={{
+                          backgroundColor: withAlpha(theme.colors.error.bg, 0.9),
+                          border: `1px solid ${theme.colors.error.border}`,
+                          color: theme.colors.error.text,
+                        }}
+                      >
+                        {profileFormMessage}
+                      </div>
+                    )}
 
                     <form onSubmit={handleSaveChanges} className="space-y-4">
                       <div className="grid gap-4 md:grid-cols-2">
@@ -471,6 +490,7 @@ export function Settings() {
               onConfirm={handleDeleteAccount}
               isBusy={deletingAccount}
               confirmLabel="Delete Account"
+              errorMessage={deleteAccountMessage}
             >
               <div className="mt-4">
                 <input

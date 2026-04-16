@@ -14,6 +14,7 @@ import { theme } from '../utils/theme';
 import { withAlpha, isSameDay, startOfWeek, startOfMonth, formatCurrency, formatLongDate, formatClock, getClientName } from '../utils/formatters';
 import { componentStyles } from '../utils/componentStyles';
 import { quickActions } from '../constants/sidebarConstants';
+import { getFormErrorMessage } from '../utils/errorMessages';
 import {
   ExternalLinkIcon, EditIcon, CheckIcon, ArrowUpIcon, TrashIcon,
 } from '../utils/icons';
@@ -27,6 +28,7 @@ export function Dashboard() {
   const [error, setError] = useState('');
   const [todoTitle, setTodoTitle] = useState('');
   const [todoSubmitting, setTodoSubmitting] = useState(false);
+  const [todoFormMessage, setTodoFormMessage] = useState('');
   const [todoBusyId, setTodoBusyId] = useState(null);
   const [clients, setClients] = useState([]);
   const [appointments, setAppointments] = useState([]);
@@ -271,21 +273,21 @@ export function Dashboard() {
   const handleCreateTodo = async (event) => {
     event.preventDefault();
     const trimmedTitle = todoTitle.trim();
+    setTodoFormMessage('');
 
     if (!trimmedTitle) {
-      setError('Task title is required');
+      setTodoFormMessage('Task title is required.');
       return;
     }
 
     setTodoSubmitting(true);
-    setError('');
 
     try {
       const response = await todosAPI.create({ title: trimmedTitle });
       setTodos((current) => [response.data, ...current]);
       setTodoTitle('');
     } catch (requestError) {
-      setError(requestError.response?.data?.error || requestError.response?.data?.message || requestError.message || 'Unable to create task');
+      setTodoFormMessage(getFormErrorMessage(requestError, 'Unable to create task'));
     } finally {
       setTodoSubmitting(false);
     }
@@ -662,6 +664,19 @@ export function Dashboard() {
                   Add Task
                 </button>
               </form>
+
+              {todoFormMessage && (
+                <div
+                  className="mb-3 rounded-xl px-3 py-2 text-sm"
+                  style={{
+                    backgroundColor: withAlpha(theme.colors.error.bg, 0.9),
+                    border: `1px solid ${theme.colors.error.border}`,
+                    color: theme.colors.error.text,
+                  }}
+                >
+                  {todoFormMessage}
+                </div>
+              )}
 
               <div className="mt-1 flex-1 space-y-2 overflow-y-auto pr-1">
                 {(loading ? [] : todos).map((todo) => (

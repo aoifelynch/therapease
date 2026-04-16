@@ -31,6 +31,7 @@ import { renderCalendarEvent } from '../components/calendar/CalendarEventContent
 import { CalendarToolbar } from '../components/calendar/CalendarToolbar';
 import { AppointmentDetailsModal } from '../components/calendar/AppointmentDetailsModal';
 import { AppointmentFormModal } from '../components/calendar/AppointmentFormModal';
+import { getFormErrorMessage } from '../utils/errorMessages';
 
 const DEFAULT_FILTER = 'all';
 
@@ -108,11 +109,11 @@ export function Calendar() {
 
   const getDefaultFeeByType = (type) => (type === 'online' ? defaultOnlineFee : defaultInPersonFee);
 
-  const resetCreateForm = () => {
+  const resetCreateForm = (preselectedClientId = '') => {
     const defaultAmount = getDefaultFeeByType('in-person');
 
     setCreateForm({
-      clientId: '',
+      clientId: preselectedClientId,
       date: '',
       startTime: '',
       endTime: '',
@@ -250,13 +251,13 @@ export function Calendar() {
       closeCreateModal();
     } catch (requestError) {
       const errorStatus = Number(requestError?.response?.status || 0);
-      const backendMessage = String(requestError?.response?.data?.message || requestError?.message || '');
-      const hasServerConflict = errorStatus === 409 || /already booked|already exists|conflict/i.test(backendMessage);
+      const rawBackendMessage = String(requestError?.response?.data?.message || requestError?.message || '');
+      const hasServerConflict = errorStatus === 409 || /already booked|already exists|conflict/i.test(rawBackendMessage);
 
       if (hasServerConflict) {
         setCreateTimeMessage('There is already someone booked for that day and time.');
       } else {
-        setCreateMessage(backendMessage || 'Unable to create appointment');
+        setCreateMessage(getFormErrorMessage(requestError, 'Unable to create appointment'));
       }
     } finally {
       setCreateBusy(false);
@@ -401,7 +402,7 @@ export function Calendar() {
 
       closeAppointmentModal();
     } catch (requestError) {
-      setAppointmentMessage(requestError.response?.data?.message || requestError.message || 'Unable to update appointment');
+      setAppointmentMessage(getFormErrorMessage(requestError, 'Unable to update appointment'));
     } finally {
       setAppointmentBusy(false);
     }
@@ -469,10 +470,12 @@ export function Calendar() {
   useEffect(() => {
     if (!location.state?.openCreateAppointmentModal) return;
 
+    const preselectedClientId = String(location.state?.preselectedClientId || '');
     setCreateMessage('');
-    resetCreateForm();
+    resetCreateForm(preselectedClientId);
     setShowCreateModal(true);
-  }, [location.state]);
+    navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+  }, [location.pathname, location.search, location.state, navigate]);
 
   const calendarEvents = useMemo(() => {
     const filteredAppointments = appointments

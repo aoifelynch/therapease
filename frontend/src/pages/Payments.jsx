@@ -23,6 +23,7 @@ import { theme } from '../utils/theme';
 import { withAlpha, formatCurrency, getClientName } from '../utils/formatters';
 import { componentStyles } from '../utils/componentStyles';
 import { ExternalLinkIcon } from '../utils/icons';
+import { getFormErrorMessage } from '../utils/errorMessages';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend, Filler);
 
@@ -249,7 +250,7 @@ export function Payments() {
 			setShowCreateLinkModal(false);
 			setCreateLinkForm({ clientId: '', amount: '' });
 		} catch (requestError) {
-			setCreateLinkMessage(requestError.response?.data?.message || requestError.message || 'Unable to create payment link');
+			setCreateLinkMessage(getFormErrorMessage(requestError, 'Unable to create payment link'));
 		} finally {
 			setCreateLinkBusy(false);
 		}

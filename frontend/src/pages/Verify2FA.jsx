@@ -5,6 +5,7 @@ import { twoFactorAPI } from '../api/api';
 import { Logo } from '../components/Logo';
 import { theme } from '../utils/theme';
 import { withAlpha } from '../utils/formatters';
+import { getFormErrorMessage } from '../utils/errorMessages';
 
 export const Verify2FA = () => {
   const [code, setCode] = useState('');
@@ -69,7 +70,7 @@ export const Verify2FA = () => {
       login(response.user, response.accessToken, response.refreshToken);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.message);
+      setError(getFormErrorMessage(err, 'Unable to verify code'));
       setCode('');
     } finally {
       setLoading(false);

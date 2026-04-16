@@ -179,12 +179,17 @@ export const authAPI = {
   },
 
   async updateProfile(profileData) {
-    const response = await api.put('/auth/profile', profileData);
+    const response = await api.put('/auth/profile', profileData, {
+      skipErrorToast: true,
+    });
     return response.data;
   },
 
   async deleteAccount(password) {
-    const response = await api.delete('/auth/profile', { data: { password } });
+    const response = await api.delete('/auth/profile', {
+      data: { password },
+      skipErrorToast: true,
+    });
     return response.data;
   }
 };
@@ -192,17 +197,26 @@ export const authAPI = {
 // 2FA API
 export const twoFactorAPI = {
   async setup() {
-    const response = await api.get('/2fa/setup');
+    const response = await api.get('/2fa/setup', {
+      skipSuccessToast: true,
+      skipErrorToast: true,
+    });
     return response.data;
   },
 
   async verifySetup(token) {
-    const response = await api.post('/2fa/verify-setup', { token });
+    const response = await api.post('/2fa/verify-setup', { token }, {
+      skipSuccessToast: true,
+      skipErrorToast: true,
+    });
     return response.data;
   },
 
   async verifyLogin(token, tempUserId) {
-    const response = await api.post('/2fa/verify-login', { token, tempUserId });
+    const response = await api.post('/2fa/verify-login', { token, tempUserId }, {
+      skipSuccessToast: true,
+      skipErrorToast: true,
+    });
     return response.data;
   }
 };
@@ -222,12 +236,15 @@ export const appointmentsAPI = {
   async create(appointmentData) {
     const response = await api.post('/appointments', appointmentData, {
       toastSuccessMessage: 'Appointment created. A confirmation email has been sent to the client.',
+      skipErrorToast: true,
     });
     return response.data;
   },
 
   async update(appointmentId, appointmentData) {
-    const response = await api.patch(`/appointments/${appointmentId}`, appointmentData);
+    const response = await api.patch(`/appointments/${appointmentId}`, appointmentData, {
+      skipErrorToast: true,
+    });
     return response.data;
   },
 
@@ -250,17 +267,23 @@ export const clientsAPI = {
   },
 
   async create(clientData) {
-    const response = await api.post('/clients', clientData);
+    const response = await api.post('/clients', clientData, {
+      skipErrorToast: true,
+    });
     return response.data;
   },
 
   async update(clientId, clientData) {
-    const response = await api.put(`/clients/${clientId}`, clientData);
+    const response = await api.put(`/clients/${clientId}`, clientData, {
+      skipErrorToast: true,
+    });
     return response.data;
   },
 
   async delete(clientId) {
-    const response = await api.delete(`/clients/${clientId}`);
+    const response = await api.delete(`/clients/${clientId}`, {
+      skipErrorToast: true,
+    });
     return response.data;
   },
 
@@ -336,6 +359,7 @@ export const paymentsAPI = {
   async createSession(sessionData) {
     const response = await api.post('/payments/create-session', sessionData, {
       toastSuccessMessage: 'Payment link sent successfully',
+      skipErrorToast: true,
     });
     return response.data;
   }
@@ -371,6 +395,7 @@ export const todosAPI = {
   async create(todoData) {
     const response = await api.post('/todos', todoData, {
       skipSuccessToast: true,
+      skipErrorToast: true,
     });
     return response.data;
   },
@@ -378,6 +403,7 @@ export const todosAPI = {
   async update(todoId, todoData) {
     const response = await api.patch(`/todos/${todoId}`, todoData, {
       skipSuccessToast: true,
+      skipErrorToast: true,
     });
     return response.data;
   },
@@ -385,6 +411,7 @@ export const todosAPI = {
   async delete(todoId) {
     const response = await api.delete(`/todos/${todoId}`, {
       skipSuccessToast: true,
+      skipErrorToast: true,
     });
     return response.data;
   },

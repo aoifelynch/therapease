@@ -5,6 +5,7 @@ import { twoFactorAPI } from '../api/api';
 import { Logo } from '../components/Logo';
 import { theme } from '../utils/theme';
 import { withAlpha } from '../utils/formatters';
+import { getFormErrorMessage } from '../utils/errorMessages';
 
 export const Setup2FA = () => {
   const [step, setStep] = useState('start');
@@ -26,7 +27,7 @@ export const Setup2FA = () => {
       setSecret(response.secret);
       setStep('display');
     } catch (err) {
-      setError(err.message);
+      setError(getFormErrorMessage(err, 'Unable to start 2FA setup'));
     } finally {
       setLoading(false);
     }
@@ -48,7 +49,7 @@ export const Setup2FA = () => {
       updateUser(response.user);
       navigate('/dashboard', { state: { success: '2FA has been enabled on your account!' } });
     } catch (err) {
-      setError(err.message);
+      setError(getFormErrorMessage(err, 'Unable to verify setup code'));
       setCode('');
     } finally {
       setLoading(false);

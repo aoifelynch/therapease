@@ -2,6 +2,7 @@ import { ModalShell } from '../ModalShell';
 import { theme } from '../../utils/theme';
 import { withAlpha, formatLongDate, getClientName } from '../../utils/formatters';
 import { getPaymentLinkTimingLabel } from '../../utils/calendarUtils';
+import { ExternalLinkIcon } from '../../utils/icons';
 
 export function AppointmentDetailsModal({
   isOpen,
@@ -48,12 +49,28 @@ export function AppointmentDetailsModal({
 
             <div className="rounded-2xl border p-4" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9), backgroundColor: withAlpha(theme.colors.gray[50], 0.78) }}>
               <p className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.6) }}>Session</p>
-              <p className="mt-1 text-base font-semibold capitalize" style={{ color: theme.colors.secondary.charcoal }}>
-                {selectedAppointment.type || 'in-person'}
-              </p>
-              <p className="text-sm capitalize" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.8) }}>
-                {selectedAppointment.status || 'upcoming'}
-              </p>
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-base font-semibold capitalize" style={{ color: theme.colors.secondary.charcoal }}>
+                    {selectedAppointment.type || 'in-person'}
+                  </p>
+                  <p className="text-sm capitalize" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.8) }}>
+                    {selectedAppointment.status || 'upcoming'}
+                  </p>
+                </div>
+                {selectedAppointment.type === 'online' && selectedAppointment.zoomLink ? (
+                  <a
+                    href={selectedAppointment.zoomLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 whitespace-nowrap rounded-xl px-2.5 py-1.5 text-xs font-semibold"
+                    style={{ backgroundColor: withAlpha(theme.colors.primary.DEFAULT, 0.16), color: theme.colors.primary.darker }}
+                  >
+                    <ExternalLinkIcon />
+                    Join Zoom
+                  </a>
+                ) : null}
+              </div>
             </div>
 
             <div className="rounded-2xl border p-4" style={{ borderColor: withAlpha(theme.colors.secondary.beige, 0.9), backgroundColor: withAlpha(theme.colors.gray[50], 0.78) }}>

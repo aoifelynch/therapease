@@ -16,6 +16,7 @@ import { theme } from '../utils/theme';
 import { withAlpha } from '../utils/formatters';
 import { componentStyles } from '../utils/componentStyles';
 import { EditIcon, TrashIcon } from '../utils/icons';
+import { getFormErrorMessage } from '../utils/errorMessages';
 import { formatAppointmentDate, getAppointmentDateTime, getTodayDateKey } from '../utils/clientListUtils';
 
 export function ClientList() {
@@ -191,7 +192,7 @@ export function ClientList() {
 			setShowCreateModal(false);
 			resetCreateForm();
 		} catch (requestError) {
-			setCreateMessage(requestError.response?.data?.message || requestError.message || 'Unable to create client');
+			setCreateMessage(getFormErrorMessage(requestError, 'Unable to create client'));
 		} finally {
 			setCreateBusy(false);
 		}
@@ -255,7 +256,7 @@ export function ClientList() {
 
 			closeEditModal();
 		} catch (requestError) {
-			setEditMessage(requestError.response?.data?.message || requestError.message || 'Unable to update client');
+			setEditMessage(getFormErrorMessage(requestError, 'Unable to update client'));
 		} finally {
 			setEditBusy(false);
 		}
@@ -531,7 +532,7 @@ export function ClientList() {
 									{ key: 'status', label: 'Status', widthClassName: 'w-[10%]' },
 									{ key: 'nextAppointment', label: 'Next Appointment', widthClassName: 'w-[15%]' },
 									{ key: 'actionsNeeded', label: 'Actions Needed', widthClassName: 'w-[17%]' },
-									{ key: 'actions', label: 'Actions', widthClassName: 'w-[8%]', headerClassName: 'pl-2 pr-4 text-right' },
+									{ key: 'actions', label: '', widthClassName: 'w-[8%]', headerClassName: 'pl-2 pr-4 text-right' },
 								]}
 								rows={rows}
 								rowKey={(row) => row.clientId}
