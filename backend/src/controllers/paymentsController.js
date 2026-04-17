@@ -1,6 +1,5 @@
 import paymentsService from '../services/paymentsService.js';
 import { createPaymentLink } from '../services/paymentsService.js';
-import { sendSMS } from '../services/smsService.js';
 
 // GET ALL
 export const getAllPayments = async (req, res) => {
@@ -56,4 +55,17 @@ export const createPaymentSession = async (req, res) => {
     sentNow,
   });
 
+};
+
+export const sendPaymentReminder = async (req, res) => {
+  const result = await paymentsService.sendPaymentReminder({
+    therapistId: req.user._id,
+    paymentId: req.params.paymentId,
+  });
+
+  res.status(200).json({
+    success: true,
+    data: result,
+    message: 'Payment reminder sent successfully',
+  });
 };

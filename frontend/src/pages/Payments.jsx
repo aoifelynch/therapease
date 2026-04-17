@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
 	BarElement,
 	CategoryScale,
@@ -26,6 +26,7 @@ import { withAlpha, formatCurrency, getClientName } from '../utils/formatters';
 import { componentStyles } from '../utils/componentStyles';
 import { ExternalLinkIcon } from '../utils/icons';
 import { getFormErrorMessage } from '../utils/errorMessages';
+import { toast } from '../utils/toastBus';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend, Filler);
 
@@ -185,33 +186,58 @@ export function Payments() {
 	const [createLinkBusy, setCreateLinkBusy] = useState(false);
 	const [createLinkMessage, setCreateLinkMessage] = useState('');
 	const [showUnsavedCreateLinkModal, setShowUnsavedCreateLinkModal] = useState(false);
+	const [sendingReminderPaymentId, setSendingReminderPaymentId] = useState('');
 	const [createLinkForm, setCreateLinkForm] = useState(EMPTY_CREATE_LINK_FORM);
 	const [initialCreateLinkForm, setInitialCreateLinkForm] = useState(EMPTY_CREATE_LINK_FORM);
 	const hasUnsavedCreateLinkChanges = JSON.stringify(createLinkForm) !== JSON.stringify(initialCreateLinkForm);
+
+	const refreshPayments = useCallback(async () => {
+		try {
+			const [paymentsResponse, clientsResponse] = await Promise.all([
+				paymentsAPI.getAll(),
+				clientsAPI.getAll(),
+			]);
+			setPayments(paymentsResponse.data || []);
+			setClients(clientsResponse.data || []);
+		} catch (requestError) {
+			setError(requestError.response?.data?.message || requestError.message || 'Unable to load payments');
+		}
+	}, []);
 
 	useEffect(() => {
 		const loadPayments = async () => {
 			setLoading(true);
 			setError('');
-
 			try {
-				const [paymentsResponse, clientsResponse] = await Promise.all([
-					paymentsAPI.getAll(),
-					clientsAPI.getAll(),
-				]);
-				setPayments(paymentsResponse.data || []);
-				setClients(clientsResponse.data || []);
-			} catch (requestError) {
-				setError(requestError.response?.data?.message || requestError.message || 'Unable to load payments');
-				setPayments([]);
-				setClients([]);
+				await refreshPayments();
 			} finally {
 				setLoading(false);
 			}
 		};
 
 		loadPayments();
-	}, []);
+	}, [refreshPayments]);
+
+	useEffect(() => {
+		const pollInterval = window.setInterval(() => {
+			if (document.visibilityState === 'visible') {
+				refreshPayments();
+			}
+		}, 15000);
+
+		const handleFocus = () => {
+			refreshPayments();
+		};
+
+		window.addEventListener('focus', handleFocus);
+		document.addEventListener('visibilitychange', handleFocus);
+
+		return () => {
+			window.clearInterval(pollInterval);
+			window.removeEventListener('focus', handleFocus);
+			document.removeEventListener('visibilitychange', handleFocus);
+		};
+	}, [refreshPayments]);
 
 	const openCreateLinkModal = () => {
 		setCreateLinkForm(EMPTY_CREATE_LINK_FORM);
@@ -264,13 +290,14 @@ export function Payments() {
 		setCreateLinkBusy(true);
 
 		try {
-			const response = await paymentsAPI.createSession({
+			await paymentsAPI.createSession({
 				clientId: normalizedClientId,
 				amount: normalizedAmount,
 				sendNow: true,
 			});
 
 			setCreateLinkMessage('Payment link sent successfully.');
+			await refreshPayments();
 
 
 			closeCreateLinkModal(true);
@@ -278,6 +305,20 @@ export function Payments() {
 			setCreateLinkMessage(getFormErrorMessage(requestError, 'Unable to create payment link'));
 		} finally {
 			setCreateLinkBusy(false);
+		}
+	};
+
+	const handleSendReminder = async (payment) => {
+		const paymentId = payment?._id || payment?.id;
+		if (!paymentId) return;
+
+		setSendingReminderPaymentId(String(paymentId));
+		try {
+			await paymentsAPI.sendReminder(paymentId);
+			toast.success('A reminder text has been sent');
+			await refreshPayments();
+		} finally {
+			setSendingReminderPaymentId('');
 		}
 	};
 
@@ -577,10 +618,17 @@ export function Payments() {
 												{normalizedStatus === 'pending' ? (
 													<button
 														type="button"
+														onClick={() => handleSendReminder(payment)}
+														disabled={sendingReminderPaymentId === String(payment._id || payment.id)}
 														className="rounded-lg px-2.5 py-1 text-xs font-semibold"
-														style={{ backgroundColor: withAlpha(theme.colors.error.bg, 0.9), color: theme.colors.error.text }}
+														style={{
+															backgroundColor: withAlpha(theme.colors.error.bg, 0.9),
+															color: theme.colors.error.text,
+															opacity: sendingReminderPaymentId === String(payment._id || payment.id) ? 0.7 : 1,
+															cursor: sendingReminderPaymentId === String(payment._id || payment.id) ? 'not-allowed' : 'pointer',
+														}}
 													>
-														Send Reminder
+														{sendingReminderPaymentId === String(payment._id || payment.id) ? 'Sending...' : 'Send Reminder'}
 													</button>
 												) : payment.receiptURL ? (
 													<a

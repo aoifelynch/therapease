@@ -362,6 +362,13 @@ export const paymentsAPI = {
       skipErrorToast: true,
     });
     return response.data;
+  },
+
+  async sendReminder(paymentId) {
+    const response = await api.post(`/payments/${paymentId}/send-reminder`, {}, {
+      skipSuccessToast: true,
+    });
+    return response.data;
   }
 };
 

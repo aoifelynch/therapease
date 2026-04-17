@@ -2,6 +2,7 @@ import Payment from '../models/Payment.js';
 import Appointment from '../models/Appointment.js';
 import Client from '../models/Client.js';
 import { createCheckoutSession, getCheckoutSessionById } from './stripeService.js';
+import { sendSMS } from './smsService.js';
 import { HttpError, NOT_FOUND, FORBIDDEN, BAD_REQUEST } from '../utils/HttpError.js';
 
 const normalizeAmount = (value) => {
@@ -11,6 +12,20 @@ const normalizeAmount = (value) => {
   }
 
   return Number(parsed.toFixed(2));
+};
+
+const formatReminderDate = (value) => {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return '';
+  }
+
+  return new Intl.DateTimeFormat('en-IE', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(parsed);
 };
 
 export const createPaymentLinkForAppointment = async ({
@@ -180,6 +195,77 @@ export const createPaymentLink = async ({
   };
 };
 
+export const sendPaymentReminder = async ({ therapistId, paymentId }) => {
+  const payment = await Payment.findById(paymentId)
+    .populate('client')
+    .populate('appointment')
+    .exec();
+
+  if (!payment) {
+    throw new HttpError(NOT_FOUND, 'Payment not found');
+  }
+
+  if (String(payment.therapist) !== String(therapistId)) {
+    throw new HttpError(FORBIDDEN, 'Forbidden');
+  }
+
+  if (payment.status !== 'pending') {
+    throw new HttpError(BAD_REQUEST, 'Payment reminder can only be sent for unpaid payments');
+  }
+
+  if (!payment.client?.phone) {
+    throw new HttpError(BAD_REQUEST, 'Client phone number is required to send a reminder');
+  }
+
+  const clientEmail = String(payment.client?.email || '').trim().toLowerCase();
+  if (!clientEmail) {
+    throw new HttpError(BAD_REQUEST, 'Client email is required to send a reminder');
+  }
+
+  const appointmentId = payment.appointment?._id || payment.appointment || null;
+  const clientId = payment.client?._id || payment.client || null;
+
+  let paymentLink = null;
+
+  if (payment.stripeSessionId) {
+    const checkoutSession = await getCheckoutSessionById(payment.stripeSessionId);
+    paymentLink = checkoutSession?.url || null;
+  }
+
+  if (!paymentLink) {
+    const refreshedSession = await createCheckoutSession({
+      clientEmail,
+      amount: payment.amount,
+      appointmentId,
+      clientId,
+      therapistId,
+    });
+
+    payment.stripeSessionId = refreshedSession.id;
+    await payment.save();
+
+    paymentLink = refreshedSession.url;
+  }
+
+  if (!paymentLink) {
+    throw new HttpError(BAD_REQUEST, 'Unable to resolve the payment link');
+  }
+
+  const appointmentDate = payment.appointment?.date || payment.createdAt;
+  const formattedDate = formatReminderDate(appointmentDate);
+  const linkText = `Reminder that payment is due for your therapy session ${formattedDate ? `on ${formattedDate}` : ''}. ${paymentLink}`.trim();
+
+  await sendSMS({
+    to: payment.client.phone,
+    message: linkText,
+  });
+
+  return {
+    sent: true,
+    paymentId: payment._id,
+  };
+};
+
 export default {
   // Get all payments for a user
   async getAllPayments(userId) {
@@ -212,5 +298,7 @@ export default {
     const payment = await Payment.create(paymentData);
 
     return payment;
-  }
+  },
+
+  sendPaymentReminder,
 };

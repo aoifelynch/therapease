@@ -113,7 +113,7 @@ const sendAfterSessionPaymentLinkIfNeeded = async (appointment) => {
 
     if (paymentLink?.url && appointment.client?.phone) {
       const clientName = appointment.client?.firstName || 'there';
-      const message = `Hi ${clientName}, your session has been marked completed. You can pay using this secure link: ${paymentLink.url}`;
+      const message = `Hi ${clientName}, your therapy session has been marked as completed. Here is your secure payment link: ${paymentLink.url}`;
 
       await sendSMS({
         to: appointment.client.phone,
@@ -143,7 +143,7 @@ const sendImmediatePaymentLinkIfNeeded = async ({ appointment, client }) => {
 
     if (paymentLink?.url && resolvedClient?.phone) {
       const clientName = resolvedClient?.firstName || 'there';
-      const message = `Hi ${clientName}, here is your payment link for your session: ${paymentLink.url}`;
+      const message = `Hi ${clientName}, here is your payment link for your therapy session: ${paymentLink.url}`;
 
       await sendSMS({
         to: resolvedClient.phone,

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import * as paymentsController from '../controllers/paymentsController.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { validate } from '../middleware/validateRequest.js';
-import { paymentSessionSchema } from '../utils/validators.js';
+import { paymentSessionSchema, objectIdParam } from '../utils/validators.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
 const router = Router();
@@ -17,6 +17,12 @@ router.get('/', asyncHandler(paymentsController.getAllPayments));
 router.post('/create-session', 
   validate(paymentSessionSchema),
   asyncHandler(paymentsController.createPaymentSession)
+);
+
+// SEND payment reminder SMS immediately
+router.post('/:paymentId/send-reminder',
+  validate(objectIdParam('paymentId')),
+  asyncHandler(paymentsController.sendPaymentReminder)
 );
 
 export default router;
