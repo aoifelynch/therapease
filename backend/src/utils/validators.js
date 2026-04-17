@@ -152,7 +152,11 @@ export const clientSchema = {
     in: ['body'],
     notEmpty: { errorMessage: "'email' field is required" },
     isEmail: { errorMessage: "'email' must be a valid email address" },
-    normalizeEmail: true
+    normalizeEmail: {
+      options: {
+        gmail_remove_dots: false,
+      }
+    }
   },
   phone: {
     in: ['body'],
