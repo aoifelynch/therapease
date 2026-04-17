@@ -24,6 +24,7 @@ export function AppointmentDetailsModal({
       title="Appointment Details"
       onClose={onClose}
       closeDisabled={closeDisabled}
+      showClose
       maxWidthClass="max-w-2xl"
       className="max-h-[90vh] overflow-y-auto"
     >

@@ -10,6 +10,7 @@ import { PageHeader } from '../components/PageHeader';
 import { PageTitleRow } from '../components/PageTitleRow';
 import { ErrorAlert } from '../components/ErrorAlert';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { DiscardChangesModal } from '../components/DiscardChangesModal';
 import { useLiveNow } from '../hooks/useLiveNow';
 import { SectionCard } from '../components/SectionCard';
 import { appointmentsAPI, clientsAPI } from '../api/api';
@@ -34,6 +35,17 @@ import { AppointmentFormModal } from '../components/calendar/AppointmentFormModa
 import { getFormErrorMessage } from '../utils/errorMessages';
 
 const DEFAULT_FILTER = 'all';
+const EMPTY_APPOINTMENT_FORM = {
+  clientId: '',
+  date: '',
+  startTime: '',
+  endTime: '',
+  type: 'in-person',
+  status: 'upcoming',
+  paymentLinkTiming: 'none',
+  autoSendPaymentLink: false,
+  amount: '',
+};
 
 export function Calendar() {
   const { user } = useAuth();
@@ -82,37 +94,49 @@ export function Calendar() {
   const [appointmentMessage, setAppointmentMessage] = useState('');
   const [showDeleteAppointmentModal, setShowDeleteAppointmentModal] = useState(false);
   const [deleteAppointmentMessage, setDeleteAppointmentMessage] = useState('');
-  const [appointmentForm, setAppointmentForm] = useState({
-    clientId: '',
-    date: '',
-    startTime: '',
-    endTime: '',
-    type: 'in-person',
-    status: 'upcoming',
-    paymentLinkTiming: 'none',
-    autoSendPaymentLink: false,
-    amount: '',
-  });
-  const [createForm, setCreateForm] = useState({
-    clientId: '',
-    date: '',
-    startTime: '',
-    endTime: '',
-    type: 'in-person',
-    paymentLinkTiming: 'none',
-    amount: '',
-  });
+  const [showUnsavedChangesModal, setShowUnsavedChangesModal] = useState(false);
+  const [pendingUnsavedCloseAction, setPendingUnsavedCloseAction] = useState('');
+  const [appointmentForm, setAppointmentForm] = useState(EMPTY_APPOINTMENT_FORM);
+  const [initialAppointmentForm, setInitialAppointmentForm] = useState(EMPTY_APPOINTMENT_FORM);
+  const [createForm, setCreateForm] = useState({ ...EMPTY_APPOINTMENT_FORM, status: undefined, autoSendPaymentLink: undefined });
+  const [initialCreateForm, setInitialCreateForm] = useState({ ...EMPTY_APPOINTMENT_FORM, status: undefined, autoSendPaymentLink: undefined });
   const startTimeOptions = useMemo(() => buildTimeOptions({ startHour: 8, endHour: 21, minuteStep: 5 }), []);
   const endTimeOptions = useMemo(() => buildTimeOptions({ startHour: 8, endHour: 22, minuteStep: 5 }), []);
   const defaultOnlineFee = useMemo(() => parseFeeValue(user?.defaultOnlineFee), [user?.defaultOnlineFee]);
   const defaultInPersonFee = useMemo(() => parseFeeValue(user?.defaultInPersonFee), [user?.defaultInPersonFee]);
 
   const getDefaultFeeByType = (type) => (type === 'online' ? defaultOnlineFee : defaultInPersonFee);
+  const requestUnsavedChangesConfirmation = (action) => {
+    setPendingUnsavedCloseAction(action);
+    setShowUnsavedChangesModal(true);
+  };
+
+  const closeUnsavedChangesModal = () => {
+    setShowUnsavedChangesModal(false);
+    setPendingUnsavedCloseAction('');
+  };
+
+  const handleConfirmUnsavedChangesClose = () => {
+    const action = pendingUnsavedCloseAction;
+    closeUnsavedChangesModal();
+
+    if (action === 'create') {
+      closeCreateModal(true);
+      return;
+    }
+
+    if (action === 'edit') {
+      closeAppointmentModal(true);
+    }
+  };
+
+  const hasUnsavedCreateChanges = JSON.stringify(createForm) !== JSON.stringify(initialCreateForm);
+  const hasUnsavedEditChanges = JSON.stringify(appointmentForm) !== JSON.stringify(initialAppointmentForm);
 
   const resetCreateForm = (preselectedClientId = '') => {
     const defaultAmount = getDefaultFeeByType('in-person');
 
-    setCreateForm({
+    const nextForm = {
       clientId: preselectedClientId,
       date: '',
       startTime: '',
@@ -120,19 +144,36 @@ export function Calendar() {
       type: 'in-person',
       paymentLinkTiming: 'none',
       amount: defaultAmount,
-    });
+    };
+
+    setCreateForm(nextForm);
+    setInitialCreateForm(nextForm);
     setCreateMessage('');
     setCreateTimeMessage('');
   };
 
-  const closeCreateModal = () => {
+  const closeCreateModal = (forceClose = false) => {
+    const shouldForceClose = forceClose === true;
     if (createBusy) return;
+
+    if (!shouldForceClose && hasUnsavedCreateChanges) {
+      requestUnsavedChangesConfirmation('create');
+      return;
+    }
+
     setShowCreateModal(false);
     resetCreateForm();
   };
 
-  const closeAppointmentModal = () => {
+  const closeAppointmentModal = (forceClose = false) => {
+    const shouldForceClose = forceClose === true;
     if (appointmentBusy || appointmentDeleteBusy) return;
+
+    if (!shouldForceClose && hasUnsavedEditChanges) {
+      requestUnsavedChangesConfirmation('edit');
+      return;
+    }
+
     setShowAppointmentModal(false);
     setSelectedAppointmentId('');
     setSelectedAppointment(null);
@@ -140,17 +181,8 @@ export function Calendar() {
     setAppointmentDetailsBusy(false);
     setAppointmentDetailsMessage('');
     setAppointmentMessage('');
-    setAppointmentForm({
-      clientId: '',
-      date: '',
-      startTime: '',
-      endTime: '',
-      type: 'in-person',
-      status: 'upcoming',
-      paymentLinkTiming: 'none',
-      autoSendPaymentLink: false,
-      amount: '',
-    });
+    setAppointmentForm(EMPTY_APPOINTMENT_FORM);
+    setInitialAppointmentForm(EMPTY_APPOINTMENT_FORM);
   };
 
   const closeAppointmentDetailsModal = () => {
@@ -237,6 +269,7 @@ export function Calendar() {
     try {
       const response = await appointmentsAPI.create(payload);
       const createdAppointment = response.data;
+      const createdAppointmentDate = getCalendarDateFromQuery(createdAppointment?.date || payload.date);
 
       const selectedClient = clients.find((client) => {
         const currentClientId = client.id || client._id;
@@ -248,7 +281,14 @@ export function Calendar() {
         : createdAppointment;
 
       setAppointments((current) => [...current, appointmentForState]);
-      closeCreateModal();
+
+      const calendarApi = calendarRef.current?.getApi();
+      if (calendarApi && createdAppointmentDate) {
+        calendarApi.changeView('timeGridWeek', createdAppointmentDate);
+        setCalendarView('timeGridWeek');
+      }
+
+      closeCreateModal(true);
     } catch (requestError) {
       const errorStatus = Number(requestError?.response?.status || 0);
       const rawBackendMessage = String(requestError?.response?.data?.message || requestError?.message || '');
@@ -278,7 +318,7 @@ export function Calendar() {
       : '';
 
     setSelectedAppointmentId(String(appointmentId));
-    setAppointmentForm({
+    const nextAppointmentForm = {
       clientId: String(appointmentClientId),
       date: normalizedDate,
       startTime: appointment.startTime || '',
@@ -290,7 +330,9 @@ export function Calendar() {
       amount: appointment.quotedAmount
         ? Number(appointment.quotedAmount).toFixed(2)
         : (appointment.amount ? Number(appointment.amount).toFixed(2) : ''),
-    });
+    };
+    setAppointmentForm(nextAppointmentForm);
+    setInitialAppointmentForm(nextAppointmentForm);
     setAppointmentMessage('');
     setAppointmentDetailsMessage('');
     setSelectedAppointment(appointment);
@@ -400,7 +442,7 @@ export function Calendar() {
         return String(currentId) === String(selectedAppointmentId) ? appointmentForState : item;
       }));
 
-      closeAppointmentModal();
+      closeAppointmentModal(true);
     } catch (requestError) {
       setAppointmentMessage(getFormErrorMessage(requestError, 'Unable to update appointment'));
     } finally {
@@ -432,7 +474,7 @@ export function Calendar() {
       setAppointments((current) => current.filter((item) => String(item.id || item._id) !== String(selectedAppointmentId)));
       closeDeleteAppointmentModal();
       setShowAppointmentDetailsModal(false);
-      closeAppointmentModal();
+      closeAppointmentModal(true);
     } catch (requestError) {
       setDeleteAppointmentMessage(requestError.response?.data?.message || requestError.message || 'Unable to delete appointment');
     } finally {
@@ -718,6 +760,12 @@ export function Calendar() {
         onConfirm={handleConfirmDeleteAppointment}
         isBusy={appointmentDeleteBusy}
         confirmLabel="Delete Appointment"
+      />
+
+      <DiscardChangesModal
+        isOpen={showUnsavedChangesModal}
+        onCancel={closeUnsavedChangesModal}
+        onConfirm={handleConfirmUnsavedChangesClose}
       />
     </div>
   );

@@ -12,6 +12,18 @@ export const AppSidebar = ({ activeNav, onNavSelect, user }) => {
   const isSettingsPage = location.pathname === '/settings';
   const [hoveredNav, setHoveredNav] = useState('');
 
+  const getUserFirstLastName = () => {
+    const fullName = String(user?.name || '').trim();
+    if (!fullName) return 'Therapist';
+
+    const nameParts = fullName.split(/\s+/).filter(Boolean);
+    if (nameParts.length === 1) return nameParts[0];
+
+    return `${nameParts[0]} ${nameParts[nameParts.length - 1]}`;
+  };
+
+  const userFirstLastName = getUserFirstLastName();
+
   const handleNavClick = (label) => {
     onNavSelect?.(label);
 
@@ -83,22 +95,19 @@ export const AppSidebar = ({ activeNav, onNavSelect, user }) => {
         <button
           type="button"
           onClick={() => navigate('/settings')}
-          className="flex w-full items-center justify-between gap-3 rounded-xl p-2 text-left transition-colors"
+          className="relative flex w-full items-center gap-3 rounded-xl p-2 pr-12 text-left transition-colors"
           style={{
             backgroundColor: isSettingsPage ? withAlpha(theme.colors.primary.lighter, 0.38) : 'transparent',
           }}
         >
-          <div>
-            <p className="text-sm font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
-              {user?.name || 'Therapist'}
-            </p>
-            <p className="text-xs" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.55) }}>
-              {user?.email || 'Signed in'}
+          <div className="min-w-0">
+            <p className="text-md font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
+              {userFirstLastName}
             </p>
           </div>
           <span
             aria-label="Settings"
-            className="relative rounded-full p-2 transition-colors"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-2 transition-colors"
             style={{
               color: isSettingsPage ? theme.colors.primary.DEFAULT : withAlpha(theme.colors.secondary.charcoal, 0.55),
               backgroundColor: isSettingsPage ? withAlpha(theme.colors.primary.lighter, 0.48) : withAlpha(theme.colors.secondary.beige, 0.35),

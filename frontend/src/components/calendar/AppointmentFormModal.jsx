@@ -248,20 +248,18 @@ export function AppointmentFormModal({
         )}
 
         <div className="flex items-center justify-end gap-2 pt-2">
-          {!isEditMode && (
-            <button
-              type="button"
-              onClick={onCancel}
-              disabled={isBusy}
-              className="rounded-xl px-4 py-2 text-sm font-medium"
-              style={{
-                backgroundColor: withAlpha(theme.colors.secondary.beige, 0.7),
-                color: theme.colors.secondary.charcoal,
-              }}
-            >
-              Cancel
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={onCancel || onClose}
+            disabled={isBusy}
+            className="rounded-xl px-4 py-2 text-sm font-medium"
+            style={{
+              backgroundColor: withAlpha(theme.colors.secondary.beige, 0.7),
+              color: theme.colors.secondary.charcoal,
+            }}
+          >
+            Cancel
+          </button>
           <button
             type="submit"
             disabled={isBusy || closeDisabled}

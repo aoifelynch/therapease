@@ -5,6 +5,7 @@ import { PageHeader } from '../components/PageHeader';
 import { PageTitleRow } from '../components/PageTitleRow';
 import { ErrorAlert } from '../components/ErrorAlert';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { DiscardChangesModal } from '../components/DiscardChangesModal';
 import { ClientFormModal } from '../components/client/ClientFormModal';
 import { ClientListControls } from '../components/client/ClientListControls';
 import { useLiveNow } from '../hooks/useLiveNow';
@@ -18,6 +19,18 @@ import { componentStyles } from '../utils/componentStyles';
 import { EditIcon, TrashIcon } from '../utils/icons';
 import { getFormErrorMessage } from '../utils/errorMessages';
 import { formatAppointmentDate, getAppointmentDateTime, getTodayDateKey } from '../utils/clientListUtils';
+
+const EMPTY_CLIENT_FORM = {
+	firstName: '',
+	lastName: '',
+	email: '',
+	phone: '',
+	dateOfBirth: '',
+	address: '',
+	profileNotes: '',
+	emergencyContactName: '',
+	emergencyContactPhone: '',
+};
 
 export function ClientList() {
 	const { user } = useAuth();
@@ -44,28 +57,12 @@ export function ClientList() {
 	const [clientToDelete, setClientToDelete] = useState(null);
 	const [deleteBusy, setDeleteBusy] = useState(false);
 	const [deleteMessage, setDeleteMessage] = useState('');
-	const [createForm, setCreateForm] = useState({
-		firstName: '',
-		lastName: '',
-		email: '',
-		phone: '',
-		dateOfBirth: '',
-		address: '',
-		profileNotes: '',
-		emergencyContactName: '',
-		emergencyContactPhone: '',
-	});
-	const [editForm, setEditForm] = useState({
-		firstName: '',
-		lastName: '',
-		email: '',
-		phone: '',
-		dateOfBirth: '',
-		address: '',
-		profileNotes: '',
-		emergencyContactName: '',
-		emergencyContactPhone: '',
-	});
+	const [showUnsavedChangesModal, setShowUnsavedChangesModal] = useState(false);
+	const [pendingUnsavedCloseAction, setPendingUnsavedCloseAction] = useState('');
+	const [createForm, setCreateForm] = useState(EMPTY_CLIENT_FORM);
+	const [initialCreateForm, setInitialCreateForm] = useState(EMPTY_CLIENT_FORM);
+	const [editForm, setEditForm] = useState(EMPTY_CLIENT_FORM);
+	const [initialEditForm, setInitialEditForm] = useState(EMPTY_CLIENT_FORM);
 	const [filters, setFilters] = useState({
 		upcomingAppointment: false,
 		actionsNeeded: false,
@@ -73,46 +70,61 @@ export function ClientList() {
 		inactive: false,
 	});
 	const todayDateKey = getTodayDateKey();
+	const hasUnsavedCreateChanges = JSON.stringify(createForm) !== JSON.stringify(initialCreateForm);
+	const hasUnsavedEditChanges = JSON.stringify(editForm) !== JSON.stringify(initialEditForm);
+
+	const requestUnsavedChangesConfirmation = (action) => {
+		setPendingUnsavedCloseAction(action);
+		setShowUnsavedChangesModal(true);
+	};
+
+	const closeUnsavedChangesModal = () => {
+		setShowUnsavedChangesModal(false);
+		setPendingUnsavedCloseAction('');
+	};
+
+	const handleConfirmUnsavedChangesClose = () => {
+		const action = pendingUnsavedCloseAction;
+		closeUnsavedChangesModal();
+
+		if (action === 'create') {
+			closeCreateModal(true);
+			return;
+		}
+
+		if (action === 'edit') {
+			closeEditModal(true);
+		}
+	};
 
 	const resetCreateForm = () => {
-		setCreateForm({
-			firstName: '',
-			lastName: '',
-			email: '',
-			phone: '',
-			dateOfBirth: '',
-			address: '',
-			profileNotes: '',
-			emergencyContactName: '',
-			emergencyContactPhone: '',
-		});
+		setCreateForm(EMPTY_CLIENT_FORM);
+		setInitialCreateForm(EMPTY_CLIENT_FORM);
 		setCreateMessage('');
 	};
 
-	const closeCreateModal = () => {
+	const closeCreateModal = (forceClose = false) => {
+		const shouldForceClose = forceClose === true;
 		if (createBusy) return;
+
+		if (!shouldForceClose && hasUnsavedCreateChanges) {
+			requestUnsavedChangesConfirmation('create');
+			return;
+		}
+
 		setShowCreateModal(false);
 		resetCreateForm();
 	};
 
 	const resetEditForm = () => {
-		setEditForm({
-			firstName: '',
-			lastName: '',
-			email: '',
-			phone: '',
-			dateOfBirth: '',
-			address: '',
-			profileNotes: '',
-			emergencyContactName: '',
-			emergencyContactPhone: '',
-		});
+		setEditForm(EMPTY_CLIENT_FORM);
+		setInitialEditForm(EMPTY_CLIENT_FORM);
 		setEditMessage('');
 	};
 
 	const openEditModal = (client) => {
 		setEditingClientId(client.id || client._id || '');
-		setEditForm({
+		const nextEditForm = {
 			firstName: client.firstName || '',
 			lastName: client.lastName || '',
 			email: client.email || '',
@@ -122,13 +134,22 @@ export function ClientList() {
 			profileNotes: client.profileNotes || '',
 			emergencyContactName: client.emergencyContact?.name || '',
 			emergencyContactPhone: client.emergencyContact?.phone || '',
-		});
+		};
+		setEditForm(nextEditForm);
+		setInitialEditForm(nextEditForm);
 		setEditMessage('');
 		setShowEditModal(true);
 	};
 
-	const closeEditModal = () => {
+	const closeEditModal = (forceClose = false) => {
+		const shouldForceClose = forceClose === true;
 		if (editBusy) return;
+
+		if (!shouldForceClose && hasUnsavedEditChanges) {
+			requestUnsavedChangesConfirmation('edit');
+			return;
+		}
+
 		setShowEditModal(false);
 		setEditingClientId('');
 		resetEditForm();
@@ -189,8 +210,7 @@ export function ClientList() {
 			const issuesResponse = await remindersAPI.getIssues();
 			setReminderIssues(issuesResponse.data || []);
 
-			setShowCreateModal(false);
-			resetCreateForm();
+			closeCreateModal(true);
 		} catch (requestError) {
 			setCreateMessage(getFormErrorMessage(requestError, 'Unable to create client'));
 		} finally {
@@ -254,7 +274,7 @@ export function ClientList() {
 			const issuesResponse = await remindersAPI.getIssues();
 			setReminderIssues(issuesResponse.data || []);
 
-			closeEditModal();
+			closeEditModal(true);
 		} catch (requestError) {
 			setEditMessage(getFormErrorMessage(requestError, 'Unable to update client'));
 		} finally {
@@ -652,6 +672,11 @@ export function ClientList() {
 				onConfirm={handleDeleteClient}
 				isBusy={deleteBusy}
 				confirmLabel="Delete Client"
+			/>
+			<DiscardChangesModal
+				isOpen={showUnsavedChangesModal}
+				onCancel={closeUnsavedChangesModal}
+				onConfirm={handleConfirmUnsavedChangesClose}
 			/>
 		</div>
 	);

@@ -5,6 +5,7 @@ import { PageHeader } from '../components/PageHeader';
 import { ErrorAlert } from '../components/ErrorAlert';
 import { ModalShell } from '../components/ModalShell';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { DiscardChangesModal } from '../components/DiscardChangesModal';
 import { ClientFormModal } from '../components/client/ClientFormModal';
 import { ClientAppointmentDetailsModal } from '../components/client/ClientAppointmentDetailsModal';
 import { useLiveNow } from '../hooks/useLiveNow';
@@ -22,6 +23,18 @@ import {
   isImageFile,
 } from '../utils/clientProfileUtils';
 import { getFormErrorMessage } from '../utils/errorMessages';
+
+const EMPTY_CLIENT_EDIT_FORM = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  dateOfBirth: '',
+  address: '',
+  profileNotes: '',
+  emergencyContactName: '',
+  emergencyContactPhone: '',
+};
 
 export function ClientProfile() {
   const { clientId } = useParams();
@@ -67,26 +80,19 @@ export function ClientProfile() {
   const [fileToDelete, setFileToDelete] = useState(null);
   const [deleteFileBusy, setDeleteFileBusy] = useState(false);
   const [deleteFileMessage, setDeleteFileMessage] = useState('');
-  const [editClientForm, setEditClientForm] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    dateOfBirth: '',
-    address: '',
-    profileNotes: '',
-    emergencyContactName: '',
-    emergencyContactPhone: '',
-  });
+  const [showUnsavedEditClientModal, setShowUnsavedEditClientModal] = useState(false);
+  const [editClientForm, setEditClientForm] = useState(EMPTY_CLIENT_EDIT_FORM);
+  const [initialEditClientForm, setInitialEditClientForm] = useState(EMPTY_CLIENT_EDIT_FORM);
   const todayDateKey = getTodayDateKey();
   const fileInputRef = useRef(null);
   const autosaveTimeoutRef = useRef(null);
   const lastSavedPayloadRef = useRef('');
+  const hasUnsavedEditClientChanges = JSON.stringify(editClientForm) !== JSON.stringify(initialEditClientForm);
 
   const openEditClientModal = () => {
     if (!client) return;
 
-    setEditClientForm({
+    const nextEditClientForm = {
       firstName: client.firstName || '',
       lastName: client.lastName || '',
       email: client.email || '',
@@ -96,15 +102,35 @@ export function ClientProfile() {
       profileNotes: client.profileNotes || '',
       emergencyContactName: client.emergencyContact?.name || '',
       emergencyContactPhone: client.emergencyContact?.phone || '',
-    });
+    };
+    setEditClientForm(nextEditClientForm);
+    setInitialEditClientForm(nextEditClientForm);
     setEditClientMessage('');
     setShowEditClientModal(true);
   };
 
-  const closeEditClientModal = () => {
+  const closeEditClientModal = (forceClose = false) => {
+    const shouldForceClose = forceClose === true;
     if (editClientBusy) return;
+
+    if (!shouldForceClose && hasUnsavedEditClientChanges) {
+      setShowUnsavedEditClientModal(true);
+      return;
+    }
+
     setShowEditClientModal(false);
+    setEditClientForm(EMPTY_CLIENT_EDIT_FORM);
+    setInitialEditClientForm(EMPTY_CLIENT_EDIT_FORM);
     setEditClientMessage('');
+  };
+
+  const closeUnsavedEditClientModal = () => {
+    setShowUnsavedEditClientModal(false);
+  };
+
+  const handleConfirmCloseEditClientModal = () => {
+    setShowUnsavedEditClientModal(false);
+    closeEditClientModal(true);
   };
 
   const closeDeleteClientModal = () => {
@@ -189,7 +215,7 @@ export function ClientProfile() {
       });
 
       setClient(response.data);
-      setShowEditClientModal(false);
+      closeEditClientModal(true);
     } catch (requestError) {
       setEditClientMessage(getFormErrorMessage(requestError, 'Unable to update client'));
     } finally {
@@ -1466,6 +1492,12 @@ export function ClientProfile() {
         onConfirm={handleConfirmDeleteFile}
         isBusy={deleteFileBusy}
         confirmLabel="Delete File"
+      />
+
+      <DiscardChangesModal
+        isOpen={showUnsavedEditClientModal}
+        onCancel={closeUnsavedEditClientModal}
+        onConfirm={handleConfirmCloseEditClientModal}
       />
     </div>
   );

@@ -9,7 +9,7 @@ export const ModalShell = ({
   maxWidthClass = 'max-w-lg',
   overlayStyle,
   className = '',
-  showClose = true,
+  showClose = false,
   closeLabel = 'Close',
   title,
   titleStyle,

@@ -13,6 +13,8 @@ import { AppSidebar } from '../components/AppSidebar';
 import { PageHeader } from '../components/PageHeader';
 import { PageTitleRow } from '../components/PageTitleRow';
 import { ErrorAlert } from '../components/ErrorAlert';
+import { ConfirmModal } from '../components/ConfirmModal';
+import { DiscardChangesModal } from '../components/DiscardChangesModal';
 import { ModalShell } from '../components/ModalShell';
 import { useLiveNow } from '../hooks/useLiveNow';
 import { StatCard } from '../components/StatCard';
@@ -163,6 +165,11 @@ const CardIcon = () => (
 	</svg>
 );
 
+const EMPTY_CREATE_LINK_FORM = {
+	clientId: '',
+	amount: '',
+};
+
 export function Payments() {
 	const { user } = useAuth();
 	const now = useLiveNow();
@@ -177,10 +184,10 @@ export function Payments() {
 	const [showCreateLinkModal, setShowCreateLinkModal] = useState(false);
 	const [createLinkBusy, setCreateLinkBusy] = useState(false);
 	const [createLinkMessage, setCreateLinkMessage] = useState('');
-	const [createLinkForm, setCreateLinkForm] = useState({
-		clientId: '',
-		amount: '',
-	});
+	const [showUnsavedCreateLinkModal, setShowUnsavedCreateLinkModal] = useState(false);
+	const [createLinkForm, setCreateLinkForm] = useState(EMPTY_CREATE_LINK_FORM);
+	const [initialCreateLinkForm, setInitialCreateLinkForm] = useState(EMPTY_CREATE_LINK_FORM);
+	const hasUnsavedCreateLinkChanges = JSON.stringify(createLinkForm) !== JSON.stringify(initialCreateLinkForm);
 
 	useEffect(() => {
 		const loadPayments = async () => {
@@ -207,15 +214,34 @@ export function Payments() {
 	}, []);
 
 	const openCreateLinkModal = () => {
-		setCreateLinkForm({ clientId: '', amount: '' });
+		setCreateLinkForm(EMPTY_CREATE_LINK_FORM);
+		setInitialCreateLinkForm(EMPTY_CREATE_LINK_FORM);
 		setCreateLinkMessage('');
 		setShowCreateLinkModal(true);
 	};
 
-	const closeCreateLinkModal = () => {
+	const closeCreateLinkModal = (forceClose = false) => {
+		const shouldForceClose = forceClose === true;
 		if (createLinkBusy) return;
+
+		if (!shouldForceClose && hasUnsavedCreateLinkChanges) {
+			setShowUnsavedCreateLinkModal(true);
+			return;
+		}
+
 		setShowCreateLinkModal(false);
+		setCreateLinkForm(EMPTY_CREATE_LINK_FORM);
+		setInitialCreateLinkForm(EMPTY_CREATE_LINK_FORM);
 		setCreateLinkMessage('');
+	};
+
+	const closeUnsavedCreateLinkModal = () => {
+		setShowUnsavedCreateLinkModal(false);
+	};
+
+	const handleConfirmCloseCreateLinkModal = () => {
+		setShowUnsavedCreateLinkModal(false);
+		closeCreateLinkModal(true);
 	};
 
 	const handleCreatePaymentLink = async (event) => {
@@ -247,8 +273,7 @@ export function Payments() {
 			setCreateLinkMessage('Payment link sent successfully.');
 
 
-			setShowCreateLinkModal(false);
-			setCreateLinkForm({ clientId: '', amount: '' });
+			closeCreateLinkModal(true);
 		} catch (requestError) {
 			setCreateLinkMessage(getFormErrorMessage(requestError, 'Unable to create payment link'));
 		} finally {
@@ -761,6 +786,12 @@ export function Payments() {
 					</div>
 				</form>
 			</ModalShell>
+
+			<DiscardChangesModal
+				isOpen={showUnsavedCreateLinkModal}
+				onCancel={closeUnsavedCreateLinkModal}
+				onConfirm={handleConfirmCloseCreateLinkModal}
+			/>
 		</div>
 	);
 }
