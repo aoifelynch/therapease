@@ -253,7 +253,7 @@ export const sendPaymentReminder = async ({ therapistId, paymentId }) => {
 
   const appointmentDate = payment.appointment?.date || payment.createdAt;
   const formattedDate = formatReminderDate(appointmentDate);
-  const linkText = `Reminder that payment is due for your therapy session ${formattedDate ? `on ${formattedDate}` : ''}. ${paymentLink}`.trim();
+  const linkText = `Reminder that payment is due for your therapy session ${paymentLink}`.trim();
 
   await sendSMS({
     to: payment.client.phone,
