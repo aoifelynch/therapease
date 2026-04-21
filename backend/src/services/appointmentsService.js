@@ -212,6 +212,36 @@ const hasAppointmentPassed = (appointment) => {
   return appointmentDate < new Date();
 };
 
+const APPOINTMENT_NOTIFICATION_FIELDS = [
+  'client',
+  'date',
+  'startTime',
+  'endTime',
+  'type',
+  'status',
+  'paymentLinkTiming',
+  'autoSendPaymentLink',
+  'quotedAmount',
+];
+
+const hasNotificationRelevantChange = (previousAppointment, nextAppointment) => APPOINTMENT_NOTIFICATION_FIELDS.some((field) => {
+  const previousValue = previousAppointment[field];
+  const nextValue = nextAppointment[field];
+
+  if (field === 'client') {
+    return String(previousValue?._id || previousValue || '') !== String(nextValue?._id || nextValue || '');
+  }
+
+  if (field === 'date') {
+    const previousTime = previousValue ? new Date(previousValue).getTime() : NaN;
+    const nextTime = nextValue ? new Date(nextValue).getTime() : NaN;
+
+    return previousTime !== nextTime;
+  }
+
+  return String(previousValue ?? '') !== String(nextValue ?? '');
+});
+
 export default {
   // Get all appointments (with date filtering)
   async getAppointments(userId, filters = {}) {
@@ -327,6 +357,11 @@ export default {
       html
     });
 
+    await sendImmediatePaymentLinkIfNeeded({
+      appointment,
+      client,
+    });
+
     return appointment;
   },
 
@@ -430,9 +465,8 @@ export default {
       { new: true, runValidators: true }
     ).populate('client').exec();
 
+    const shouldSendModifiedEmail = hasNotificationRelevantChange(appointment, updatedAppointment);
     const statusChanged = previousStatus !== updatedAppointment.status;
-    const typeChanged = previousType !== updatedAppointment.type;
-    const shouldSendModifiedEmail = (statusChanged && updatedAppointment.status === 'cancelled') || typeChanged;
 
     if (shouldSendModifiedEmail && updatedAppointment.client?.email) {
       const html = appointmentModifiedEmail({

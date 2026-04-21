@@ -1,5 +1,6 @@
 import paymentsService from '../services/paymentsService.js';
 import { createPaymentLink } from '../services/paymentsService.js';
+import { sendSMS } from '../services/smsService.js';
 
 // GET ALL
 export const getAllPayments = async (req, res) => {

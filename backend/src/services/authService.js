@@ -24,7 +24,7 @@ export default {
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      throw new HttpError(BAD_REQUEST, "Email already exists");
+      throw new HttpError(BAD_REQUEST, "Email is already in use");
     }
 
     // Hash password and create user
@@ -147,7 +147,7 @@ export default {
       // Check if email is already taken by another user
       const existingUser = await User.findOne({ email, _id: { $ne: userId } });
       if (existingUser) {
-        throw new HttpError(BAD_REQUEST, "Email already exists");
+        throw new HttpError(BAD_REQUEST, "Email is already in use");
       }
       updates.email = email;
     }

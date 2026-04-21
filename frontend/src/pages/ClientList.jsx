@@ -441,6 +441,7 @@ export function ClientList() {
 				clientId,
 				name,
 				status,
+				actionsNeeded,
 				nextAppointment,
 				actionsNeededLabel,
 				actionsNeededDetails,
@@ -582,11 +583,25 @@ export function ClientList() {
 										</td>
 										<td className="px-4 py-3">{row.nextAppointment ? formatAppointmentDate(row.nextAppointment.dateTime) : 'Not Scheduled'}</td>
 										<td
-											className="px-4 py-3 whitespace-nowrap overflow-hidden text-ellipsis"
+											className="group relative px-4 py-3 whitespace-nowrap overflow-hidden text-ellipsis"
 											title={row.actionsNeededDetails || row.actionsNeededLabel}
 											style={{ color: withAlpha(theme.colors.primary.darker, 0.78) }}
 										>
-											{row.actionsNeededLabel}
+											<span>{row.actionsNeededLabel}</span>
+											{row.actionsNeeded?.length > 1 ? (
+												<div
+													className="pointer-events-none absolute left-4 top-full z-20 mt-1 hidden min-w-[16rem] rounded-lg border px-3 py-2 text-xs shadow-lg group-hover:block"
+													style={{
+														backgroundColor: theme.colors.gray[50],
+														borderColor: componentStyles.subtleBorder,
+														color: theme.colors.secondary.charcoal,
+													}}
+												>
+													{row.actionsNeeded.map((actionItem) => (
+														<div key={actionItem} className="leading-relaxed">{actionItem}</div>
+													))}
+												</div>
+											) : null}
 										</td>
 										<td className="py-3 pl-2 pr-4">
 											<div className="flex items-center justify-end gap-2">
