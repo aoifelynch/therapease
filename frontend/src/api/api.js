@@ -1,6 +1,8 @@
 import axios from 'axios';
 import { toast } from '../utils/toastBus';
 
+const apiBaseURL = import.meta.env?.VITE_API_URL || 'http://localhost:3001/api';
+
 const clearAuthStorage = () => {
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
@@ -21,9 +23,8 @@ const refreshAccessToken = async () => {
     throw new Error('No refresh token available');
   }
 
-  const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
   const response = await axios.post(
-    `${baseURL}/auth/refresh`,
+    `${apiBaseURL}/auth/refresh`,
     { refreshToken: storedRefreshToken },
     {
       timeout: 10000,
@@ -50,7 +51,7 @@ const refreshAccessToken = async () => {
 };
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001/api',
+  baseURL: apiBaseURL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
