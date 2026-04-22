@@ -212,7 +212,7 @@ export function AppointmentFormModal({
             >
               <option value="none">Do not send automatically</option>
               <option value="now">Send now</option>
-              <option value="before">Send before session</option>
+              <option value="before">Send the day before session</option>
               <option value="after">Send after session</option>
             </select>
           </div>
