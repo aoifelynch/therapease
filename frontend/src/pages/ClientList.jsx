@@ -583,23 +583,16 @@ export function ClientList() {
 										</td>
 										<td className="px-4 py-3">{row.nextAppointment ? formatAppointmentDate(row.nextAppointment.dateTime) : 'Not Scheduled'}</td>
 										<td
-											className="group relative px-4 py-3 whitespace-nowrap overflow-hidden text-ellipsis"
+											className="group px-4 py-3"
 											title={row.actionsNeededDetails || row.actionsNeededLabel}
 											style={{ color: withAlpha(theme.colors.primary.darker, 0.78) }}
 										>
-											<span>{row.actionsNeededLabel}</span>
+											<span className={row.actionsNeeded?.length > 1 ? 'block truncate whitespace-nowrap group-hover:hidden' : 'block truncate whitespace-nowrap'}>
+												{row.actionsNeededLabel}
+											</span>
 											{row.actionsNeeded?.length > 1 ? (
-												<div
-													className="pointer-events-none absolute left-4 top-full z-20 mt-1 hidden min-w-[16rem] rounded-lg border px-3 py-2 text-xs shadow-lg group-hover:block"
-													style={{
-														backgroundColor: theme.colors.gray[50],
-														borderColor: componentStyles.subtleBorder,
-														color: theme.colors.secondary.charcoal,
-													}}
-												>
-													{row.actionsNeeded.map((actionItem) => (
-														<div key={actionItem} className="leading-relaxed">{actionItem}</div>
-													))}
+												<div className="hidden whitespace-normal text-xs leading-relaxed group-hover:block">
+													{row.actionsNeeded.join(' • ')}
 												</div>
 											) : null}
 										</td>
