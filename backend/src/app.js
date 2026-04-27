@@ -15,6 +15,8 @@ import authRoutes from "./routes/authRoutes.js";
 import { errorHandler, unknownEndpoint } from './middleware/error.js';
 import twoFactorRoutes from "./routes/twoFactorRoutes.js";
 import webhookRoutes from "./routes/webhook.js";
+import swaggerUi from "swagger-ui-express";
+import swaggerSpec from "./docs/swagger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,6 +60,12 @@ const createApp = () => {
     app.use("/api/auth", authRoutes);
     app.use("/api/2fa", twoFactorRoutes);
 
+    app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+    app.get("/api/docs.json", (req, res) => {
+        res.setHeader("Content-Type", "application/json");
+        res.send(swaggerSpec);
+    });
+    
     // Serve index.html for all non-API routes (SPA support)
     app.get(/^(?!\/api).*/, (req, res) => {
         res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));

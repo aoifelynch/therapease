@@ -7,6 +7,26 @@ import { paymentReceiptEmail } from "../utils/emailTemplates/paymentReceiptEmail
 const router = express.Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+/**
+ * @openapi
+ * tags:
+ *   - name: Webhook
+ *     description: External webhook callbacks
+ */
+
+/**
+ * @openapi
+ * /api/webhook/stripe:
+ *   post:
+ *     tags: [Webhook]
+ *     summary: Stripe webhook receiver
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: Webhook received
+ *       400:
+ *         description: Webhook error
+ */
 router.post("/stripe", express.raw({ type: "application/json" }), async (req, res) => {
 
   const sig = req.headers["stripe-signature"];
