@@ -23,11 +23,20 @@ const swaggerDefinition = {
   security: [{ bearerAuth: [] }]
 };
 
+const routesPath = path.join(__dirname, '../routes/*.js');
+
 const options = {
   definition: swaggerDefinition,
-  apis: [path.join(__dirname, '../routes/*.js')]
+  apis: [routesPath]
 };
 
-const swaggerSpec = swaggerJsdoc(options);
+let swaggerSpec;
+try {
+  swaggerSpec = swaggerJsdoc(options);
+  console.log('Swagger spec generated successfully from:', routesPath);
+} catch (error) {
+  console.error('Error generating Swagger spec:', error);
+  swaggerSpec = swaggerJsdoc({ definition: swaggerDefinition, apis: [] });
+}
 
 export default swaggerSpec;
