@@ -67,7 +67,7 @@ router.get('/', asyncHandler(remindersController.getAllReminders));
  */
 // CREATE reminder
 router.post('/', 
-  validate(reminderSchema), 
+  ...validate(reminderSchema), 
   asyncHandler(remindersController.createReminder)
 );
 

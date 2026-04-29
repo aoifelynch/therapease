@@ -36,6 +36,16 @@ const EMPTY_CLIENT_EDIT_FORM = {
   emergencyContactPhone: '',
 };
 
+const getHistoryDateKey = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export function ClientProfile() {
   const { clientId } = useParams();
   const navigate = useNavigate();
@@ -621,6 +631,29 @@ export function ClientProfile() {
     const sorted = [...historyItems].sort((first, second) => first.date - second.date);
     return historySortOrder === 'newest' ? sorted.reverse() : sorted;
   }, [historyItems, historySortOrder]);
+
+  const groupedHistoryItems = useMemo(() => {
+    const groups = [];
+
+    orderedHistoryItems.forEach((item) => {
+      const dateKey = getHistoryDateKey(item.date);
+      const lastGroup = groups[groups.length - 1];
+
+      if (lastGroup && lastGroup.dateKey === dateKey) {
+        lastGroup.items.push(item);
+        return;
+      }
+
+      groups.push({
+        dateKey,
+        date: item.date,
+        label: formatShortDate(item.date),
+        items: [item],
+      });
+    });
+
+    return groups;
+  }, [orderedHistoryItems]);
 
   const availableNoteAppointments = useMemo(() => {
     const appointmentIdsWithNotes = new Set(
@@ -1412,25 +1445,42 @@ export function ClientProfile() {
                   </div>
                 </div>
                 <div className="max-h-[28rem] overflow-y-auto pr-1">
-                  {orderedHistoryItems.length > 0 ? (
+                  {groupedHistoryItems.length > 0 ? (
                     <div className="space-y-4">
-                      {orderedHistoryItems.map((item, index) => (
-                        <div key={item.id} className="flex gap-3">
+                      {groupedHistoryItems.map((group, groupIndex) => (
+                        <div key={group.dateKey || `${group.label}-${groupIndex}`} className="flex gap-3">
                           <div className="flex flex-col items-center">
                             <span
                               className="mt-1 h-2.5 w-2.5 rounded-full"
                               style={{ border: `2px solid ${theme.colors.secondary.charcoal}`, backgroundColor: theme.colors.gray[50] }}
                             />
-                            {index < orderedHistoryItems.length - 1 && (
+                            {groupIndex < groupedHistoryItems.length - 1 && (
                               <span className="mt-1 h-full w-px" style={{ backgroundColor: withAlpha(theme.colors.secondary.charcoal, 0.3), minHeight: '34px' }} />
                             )}
                           </div>
-                          <div className="pb-2">
+                          <div className="min-w-0 flex-1 pb-2">
                             <p className="text-sm font-semibold" style={{ color: theme.colors.secondary.charcoal }}>
-                              {formatShortDate(item.date)}
+                              {group.label}
                             </p>
-                            <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.86) }}>{item.title}</p>
-                            <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.72) }}>{item.subtitle}</p>
+                            <div className="mt-2 space-y-3">
+                              {group.items.map((item, itemIndex) => (
+                                <div key={item.id} className="flex gap-3">
+                                  <div className="flex flex-col items-center pt-1">
+                                    <span
+                                      className="h-2 w-2 rounded-full"
+                                      style={{ border: `2px solid ${theme.colors.secondary.charcoal}`, backgroundColor: theme.colors.gray[50] }}
+                                    />
+                                    {itemIndex < group.items.length - 1 && (
+                                      <span className="mt-1 w-px flex-1" style={{ backgroundColor: withAlpha(theme.colors.secondary.charcoal, 0.22), minHeight: '22px' }} />
+                                    )}
+                                  </div>
+                                  <div className="pb-1">
+                                    <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.86) }}>{item.title}</p>
+                                    <p className="text-sm" style={{ color: withAlpha(theme.colors.secondary.charcoal, 0.72) }}>{item.subtitle}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       ))}

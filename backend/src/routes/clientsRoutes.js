@@ -52,7 +52,7 @@ router.get('/', asyncHandler(clientsController.getAllClients));
  */
 // GET client appointments by client ID
 router.get('/:clientId/appointments', 
-  validate(objectIdParam('clientId')), 
+  ...validate(objectIdParam('clientId')), 
   asyncHandler(clientsController.getClientAppointments)
 );
 
@@ -76,7 +76,7 @@ router.get('/:clientId/appointments',
  */
 // GET client notes by client ID
 router.get('/:clientId/notes', 
-  validate(objectIdParam('clientId')), 
+  ...validate(objectIdParam('clientId')), 
   asyncHandler(clientsController.getClientNotes)
 );
 
@@ -106,9 +106,9 @@ router.get('/:clientId/notes',
  */
 // CREATE note for client
 router.post('/:clientId/notes',
-  validate(objectIdParam('clientId')),
+  ...validate(objectIdParam('clientId')),
   clientsController.attachClientId,
-  validate(noteSchema),
+  ...validate(noteSchema),
   asyncHandler(clientsController.createClientNote)
 );
 
@@ -132,7 +132,7 @@ router.post('/:clientId/notes',
  */
 // GET single client by ID with all related data
 router.get('/:id', 
-  validate(clientIdParam), 
+  ...validate(clientIdParam), 
   asyncHandler(clientsController.getClientById)
 );
 
@@ -156,7 +156,7 @@ router.get('/:id',
  */
 // CREATE new client
 router.post('/', 
-  validate(clientSchema), 
+  ...validate(clientSchema), 
   asyncHandler(clientsController.createClient)
 );
 
@@ -186,8 +186,8 @@ router.post('/',
  */
 // UPDATE client
 router.put('/:id',
-  validate(clientIdParam),
-  validate(clientSchema),
+  ...validate(clientIdParam),
+  ...validate(clientSchema),
   asyncHandler(clientsController.updateClient)
 );
 
@@ -211,7 +211,7 @@ router.put('/:id',
  */
 // DELETE client
 router.delete('/:id',
-  validate(clientIdParam),
+  ...validate(clientIdParam),
   asyncHandler(clientsController.deleteClient)
 );
 

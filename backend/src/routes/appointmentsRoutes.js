@@ -52,7 +52,7 @@ router.get('/', asyncHandler(appointmentsController.getAllAppointments));
  */
 // GET single appointment by ID
 router.get('/:appointmentId', 
-  validate(objectIdParam('appointmentId')), 
+  ...validate(objectIdParam('appointmentId')), 
   asyncHandler(appointmentsController.getAppointmentById)
 );
 
@@ -76,7 +76,7 @@ router.get('/:appointmentId',
  */
 // CREATE new appointment
 router.post('/', 
-  validate(appointmentSchema), 
+  ...validate(appointmentSchema), 
   asyncHandler(appointmentsController.createAppointment)
 );
 
@@ -106,8 +106,8 @@ router.post('/',
  */
 // UPDATE appointment
 router.patch('/:appointmentId',
-  validate(objectIdParam('appointmentId')),
-  validate(appointmentUpdateSchema),
+  ...validate(objectIdParam('appointmentId')),
+  ...validate(appointmentUpdateSchema),
   asyncHandler(appointmentsController.updateAppointment)
 );
 
@@ -131,7 +131,7 @@ router.patch('/:appointmentId',
  */
 // DELETE appointment
 router.delete('/:appointmentId',
-  validate(objectIdParam('appointmentId')),
+  ...validate(objectIdParam('appointmentId')),
   asyncHandler(appointmentsController.deleteAppointment)
 );
 

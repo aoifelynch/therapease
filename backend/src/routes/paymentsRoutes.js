@@ -52,7 +52,7 @@ router.get('/', asyncHandler(paymentsController.getAllPayments));
  */
 // CREATE payment session (Stripe checkout)
 router.post('/create-session', 
-  validate(paymentSessionSchema),
+  ...validate(paymentSessionSchema),
   asyncHandler(paymentsController.createPaymentSession)
 );
 
@@ -76,7 +76,7 @@ router.post('/create-session',
  */
 // SEND payment reminder SMS immediately
 router.post('/:paymentId/send-reminder',
-  validate(objectIdParam('paymentId')),
+  ...validate(objectIdParam('paymentId')),
   asyncHandler(paymentsController.sendPaymentReminder)
 );
 

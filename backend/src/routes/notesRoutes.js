@@ -52,7 +52,7 @@ router.get('/', asyncHandler(notesController.getNotes));
  */
 // GET single note
 router.get('/:noteId', 
-  validate(objectIdParam('noteId')), 
+  ...validate(objectIdParam('noteId')), 
   asyncHandler(notesController.getNoteById)
 );
 
@@ -82,7 +82,7 @@ router.get('/:noteId',
  */
 // UPDATE note
 router.put('/:noteId', 
-  validate(objectIdParam('noteId')), 
+  ...validate(objectIdParam('noteId')), 
   asyncHandler(notesController.updateNote)
 );
 
@@ -106,7 +106,7 @@ router.put('/:noteId',
  */
 // DELETE note 
 router.delete('/:noteId', 
-  validate(objectIdParam('noteId')), 
+  ...validate(objectIdParam('noteId')), 
   asyncHandler(notesController.deleteNote)
 );
 

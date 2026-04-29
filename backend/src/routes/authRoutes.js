@@ -39,7 +39,7 @@ const router = Router();
  *       400:
  *         description: Validation error
  */
-router.post('/register', validate(registerSchema), asyncHandler(authController.register));
+router.post('/register', ...validate(registerSchema), asyncHandler(authController.register));
 
 /**
  * @openapi
@@ -59,7 +59,7 @@ router.post('/register', validate(registerSchema), asyncHandler(authController.r
  *       401:
  *         description: Invalid credentials
  */
-router.post('/login', validate(loginSchema), asyncHandler(authController.login));
+router.post('/login', ...validate(loginSchema), asyncHandler(authController.login));
 
 /**
  * @openapi
@@ -79,7 +79,7 @@ router.post('/login', validate(loginSchema), asyncHandler(authController.login))
  *       401:
  *         description: Invalid or expired refresh token
  */
-router.post('/refresh', validate(refreshTokenSchema), asyncHandler(authController.refreshToken));
+router.post('/refresh', ...validate(refreshTokenSchema), asyncHandler(authController.refreshToken));
 
 /**
  * @openapi
@@ -132,7 +132,7 @@ router.get('/me', authenticate, asyncHandler(authController.getMe));
  *       401:
  *         description: Unauthorized
  */
-router.put('/profile', authenticate, validate(updateProfileSchema), asyncHandler(authController.updateProfile));
+router.put('/profile', authenticate, ...validate(updateProfileSchema), asyncHandler(authController.updateProfile));
 
 /**
  * @openapi
@@ -154,6 +154,6 @@ router.put('/profile', authenticate, validate(updateProfileSchema), asyncHandler
  *       401:
  *         description: Unauthorized
  */
-router.delete('/profile', authenticate, validate(deleteAccountSchema), asyncHandler(authController.deleteAccount));
+router.delete('/profile', authenticate, ...validate(deleteAccountSchema), asyncHandler(authController.deleteAccount));
 
 export default router;

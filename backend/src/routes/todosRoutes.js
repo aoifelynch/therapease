@@ -48,7 +48,7 @@ router.get('/', asyncHandler(todosController.getAllTodos));
  *       201:
  *         description: Todo created successfully
  */
-router.post('/', validate(todoCreateSchema), asyncHandler(todosController.createTodo));
+router.post('/', ...validate(todoCreateSchema), asyncHandler(todosController.createTodo));
 
 /**
  * @openapi
@@ -76,8 +76,8 @@ router.post('/', validate(todoCreateSchema), asyncHandler(todosController.create
  */
 router.patch(
   '/:todoId',
-  validate(objectIdParam('todoId')),
-  validate(todoUpdateSchema),
+  ...validate(objectIdParam('todoId')),
+  ...validate(todoUpdateSchema),
   asyncHandler(todosController.updateTodo)
 );
 
@@ -101,7 +101,7 @@ router.patch(
  */
 router.delete(
   '/:todoId',
-  validate(objectIdParam('todoId')),
+  ...validate(objectIdParam('todoId')),
   asyncHandler(todosController.deleteTodo)
 );
 

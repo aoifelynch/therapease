@@ -78,7 +78,7 @@ userSchema.methods.verifyPassword = async function (password) {
   return bcrypt.compare(password, this.passwordHash);
 };
 
-userSchema.pre("findOneAndDelete", async function (next) {
+userSchema.pre("findOneAndDelete", async function () {
   const userId = this.getQuery()._id;
 
   const [clientDocs, appointmentDocs] = await Promise.all([
@@ -101,8 +101,6 @@ userSchema.pre("findOneAndDelete", async function (next) {
     Todo.deleteMany({ user: userId }),
     Client.deleteMany({ user: userId })
   ]);
-
-  next();
 });
 
 export default mongoose.model("User", userSchema);
