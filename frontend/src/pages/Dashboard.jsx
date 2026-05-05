@@ -636,7 +636,7 @@ export function Dashboard() {
             </SectionCard>
 
             {/* To-Do List */}
-            <SectionCard title="To-Do List" className="h-[22rem] flex flex-col" bodyClassName="flex flex-1 flex-col">
+            <SectionCard title="To-Do List" className="h-[22rem] flex flex-col" bodyClassName="flex min-h-0 flex-1 flex-col">
 
               <form onSubmit={handleCreateTodo} className="mb-5 flex gap-3">
                 <input
@@ -678,9 +678,9 @@ export function Dashboard() {
                 </div>
               )}
 
-              <div className="mt-1 flex-1 space-y-2 overflow-y-auto pr-1">
+              <div className="mt-1 flex min-h-0 flex-1 flex-col space-y-2 overflow-y-auto pr-1">
                 {(loading ? [] : todos).map((todo) => (
-                  <div key={todo.id || todo._id} className="flex items-center gap-2 rounded-xl px-2 py-1.5 transition-colors" style={{ backgroundColor: todo.completed ? withAlpha(theme.colors.secondary.sage, 0.55) : 'transparent' }}>
+                  <div key={todo.id || todo._id} className="flex min-w-0 items-start gap-2 rounded-xl px-2 py-1.5 transition-colors" style={{ backgroundColor: todo.completed ? withAlpha(theme.colors.secondary.sage, 0.55) : 'transparent' }}>
                     <button
                       type="button"
                       aria-label={todo.completed ? 'Mark task incomplete' : 'Mark task complete'}
@@ -696,7 +696,7 @@ export function Dashboard() {
                     >
                       {todo.completed && <CheckIcon />}
                     </button>
-                    <p className="flex-1 text-sm leading-tight" style={{ color: todo.completed ? withAlpha(theme.colors.secondary.charcoal, 0.45) : withAlpha(theme.colors.secondary.charcoal, 0.8), textDecoration: todo.completed ? 'line-through' : 'none' }}>
+                    <p className="min-w-0 flex-1 break-words text-sm leading-tight" style={{ color: todo.completed ? withAlpha(theme.colors.secondary.charcoal, 0.45) : withAlpha(theme.colors.secondary.charcoal, 0.8), textDecoration: todo.completed ? 'line-through' : 'none', overflowWrap: 'anywhere' }}>
                       {todo.title}
                     </p>
                     <button

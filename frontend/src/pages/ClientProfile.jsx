@@ -1387,6 +1387,8 @@ export function ClientProfile() {
                 isOpen={Boolean(viewingNote)}
                 title={`Session Notes - ${new Intl.DateTimeFormat('en-IE', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(viewingNote?.createdAt || new Date()))}`}
                 onClose={() => setViewingNote(null)}
+                showClose
+                closeLabel="Close"
                 maxWidthClass="max-w-2xl"
                 className="max-h-[90vh] overflow-y-auto"
               >
